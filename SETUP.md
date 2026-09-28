@@ -109,3 +109,44 @@ Your project should be marked as linked.
 - **"Access blocked: app has not completed verification":** your Gmail address is not listed as a test user (step 2b.6).
 - **No refresh token returned:** revoke the app at https://myaccount.google.com/permissions and sign in again with consent.
 - **`check:env` fails:** it names the variable. Keys must start with `sb_publishable_` / `sb_secret_`, and `TOKEN_ENCRYPTION_KEY` must decode to exactly 32 bytes.
+
+## Database and RLS sanity checklist (Phase 3)
+
+Apply the schema with `npx supabase db push`, then regenerate types with `npm run db:types`. Run these in **Supabase → SQL Editor**.
+
+1. **All 7 tables exist with RLS on.** Expect 7 rows, all `true`:
+   ```sql
+   select tablename, rowsecurity from pg_tables where schemaname = 'public' order by 1;
+   ```
+2. **Policies exist for 6 tables and none for `gmail_connections`.** Expect 4 rows (select, insert, update, delete) for each of `applications`, `email_events`, `processed_messages`, `scan_items`, `scans`, `user_settings`, and nothing for `gmail_connections`:
+   ```sql
+   select tablename, policyname, cmd from pg_policies where schemaname = 'public' order by 1, 3;
+   ```
+3. **Browser roles cannot touch `gmail_connections`.** Expect `false` for both:
+   ```sql
+   select has_table_privilege('anon', 'public.gmail_connections', 'select') as anon,
+          has_table_privilege('authenticated', 'public.gmail_connections', 'select') as authenticated;
+   ```
+4. **The RPCs are security invoker** (`prosecdef` = `false`, so RLS applies):
+   ```sql
+   select proname, prosecdef from pg_proc
+   where pronamespace = 'public'::regnamespace and proname in ('claim_scan_lease', 'delete_application');
+   ```
+5. **Signup trigger creates `user_settings`.** Authentication → Users → **Add user** → `test@example.com` (tick auto-confirm). Then:
+   ```sql
+   select * from public.user_settings;   -- one row for the new user
+   ```
+6. **One active scan per user.** Run this twice; the second run must fail with a unique violation:
+   ```sql
+   insert into public.scans (user_id, range_start, range_end, status)
+   select id, now(), now(), 'processing' from auth.users where email = 'test@example.com';
+   ```
+7. **Cross-user isolation.** As the test user (replace the id), you should see only your own rows:
+   ```sql
+   begin;
+   set local role authenticated;
+   select set_config('request.jwt.claims', '{"sub":"<test-user-uuid>"}', true);
+   select count(*) from public.scans;   -- only the test user's scans
+   rollback;
+   ```
+8. **Clean up.** Authentication → Users → delete `test@example.com`. Its rows cascade away.
