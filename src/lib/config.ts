@@ -119,6 +119,9 @@ export const QUERY_EXCLUSIONS = "-in:chats -in:spam -in:trash";
 
 export const GMAIL_LIST_PAGE_SIZE = 500;
 
+/** "Since …" scan preset: the start of the user's job search (local midnight). */
+export const HISTORY_START = { year: 2026, monthIndex: 4, day: 1 } as const;
+
 // ---------------------------------------------------------------------------
 // A7: Classification
 // ---------------------------------------------------------------------------

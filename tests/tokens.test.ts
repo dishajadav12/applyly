@@ -72,6 +72,18 @@ describe("getAccessToken", () => {
     expect(patch.refresh_token_enc).toBeUndefined(); // not rotated: left untouched
   });
 
+  it("forceRefresh bypasses a still-valid cached token (used after a 401)", async () => {
+    getGmailConnection.mockResolvedValue(
+      connection({
+        access_token_enc: encrypt("cached-access"),
+        access_token_expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
+      }),
+    );
+    fetchMock.mockResolvedValue(jsonResponse({ access_token: "forced", expires_in: 3600 }));
+    expect(await getAccessToken("u1", { forceRefresh: true })).toBe("forced");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("refreshes when there is no stored access token", async () => {
     getGmailConnection.mockResolvedValue(connection());
     fetchMock.mockResolvedValue(jsonResponse({ access_token: "fresh", expires_in: 3600 }));

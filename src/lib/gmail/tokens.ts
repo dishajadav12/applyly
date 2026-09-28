@@ -18,17 +18,17 @@ export class NeedsReconnectError extends Error {
 
 /**
  * Returns a valid Gmail access token for the user, refreshing via Google when the
- * stored one is missing or about to expire. On invalid_grant, marks the connection
+ * stored one is missing or about to expire (or when `forceRefresh` is set, e.g. after a 401). On invalid_grant, marks the connection
  * needs_reconnect and throws NeedsReconnectError.
  */
-export async function getAccessToken(userId: string): Promise<string> {
+export async function getAccessToken(userId: string, options: { forceRefresh?: boolean } = {}): Promise<string> {
   const admin = createAdminClient();
   const connection = await getGmailConnection(admin, userId);
 
   if (!connection || connection.status !== "active") throw new NeedsReconnectError();
 
   const expiresAt = connection.access_token_expires_at ? Date.parse(connection.access_token_expires_at) : 0;
-  if (connection.access_token_enc && expiresAt - Date.now() > EXPIRY_SKEW_MS) {
+  if (!options.forceRefresh && connection.access_token_enc && expiresAt - Date.now() > EXPIRY_SKEW_MS) {
     return decrypt(connection.access_token_enc);
   }
 
