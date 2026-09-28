@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "db:types": "supabase gen types typescript --linked > src/lib/db/types.gen.ts"
+    "db:types": "supabase gen types typescript --linked > src/lib/db/types.gen.ts",
+    "check:env": "node scripts/check-env.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
