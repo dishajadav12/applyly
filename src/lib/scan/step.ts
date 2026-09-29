@@ -1,10 +1,12 @@
 import "server-only";
 
-import { PARSER_VERSION, SCAN_STEP_BATCH_SIZE, type EventType, type Status } from "@/lib/config";
+import { PARSER_VERSION, SCAN_STEP_BATCH_SIZE, type AiProviderName, type EventType, type Status } from "@/lib/config";
+import { applyAiFallback, getAiProvider, isAiEligible } from "@/lib/ai";
 import type { Db, Scan } from "@/lib/db/repo";
 import * as repo from "@/lib/db/repo";
 import type { TablesInsert, TablesUpdate } from "@/lib/db/types.gen";
 import { extractFromMessage, type ExtractionResult } from "@/lib/extract";
+import { normalizeMessage } from "@/lib/extract/normalize";
 import { createGmailClient, getMessage, pool } from "@/lib/gmail/client";
 import { parseMessage, type ParsedMessage } from "@/lib/gmail/mime";
 import { getAccessToken, NeedsReconnectError } from "@/lib/gmail/tokens";
@@ -58,10 +60,14 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
     const admin = createAdminClient();
     const [settings, connection] = await Promise.all([repo.getUserSettings(db, userId), repo.getGmailConnection(admin, userId)]);
     const classifyContext = { firstName: settings?.first_name ?? undefined, selfEmail: connection?.google_email };
+    // Phase 12: off unless the user opted in (user_settings.ai_provider), and getAiProvider itself
+    // returns null if the provider is misconfigured (e.g. no GEMINI_API_KEY) — either way, no AI call.
+    const aiProviderName: AiProviderName | null = settings?.ai_provider === "gemini" || settings?.ai_provider === "ollama" ? settings.ai_provider : null;
+    const aiProvider = getAiProvider(aiProviderName);
 
     const client = createGmailClient({ getToken: (forceRefresh) => getAccessToken(userId, { forceRefresh }) });
 
-    // Phase A: fetch + parse + extract concurrently (I/O-bound, safe to parallelize).
+    // Phase A: fetch + parse + extract (+ optional AI fallback) concurrently (I/O-bound, safe to parallelize).
     type Fetched = { messageId: string; parsed?: ParsedMessage; extraction?: ExtractionResult; error?: string };
     let needsReconnect = false;
     const fetched: Fetched[] = await pool(items, FETCH_CONCURRENCY, async (item): Promise<Fetched> => {
@@ -69,7 +75,11 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
       try {
         const raw = await getMessage(client, item.message_id, { format: "full" });
         const parsed = parseMessage(raw);
-        const extraction = extractFromMessage(parsed, classifyContext);
+        let extraction = extractFromMessage(parsed, classifyContext);
+        if (aiProvider && isAiEligible(extraction)) {
+          const { text } = normalizeMessage(parsed);
+          extraction = await applyAiFallback(extraction, { subject: parsed.subject, sender: parsed.from, text }, aiProvider);
+        }
         return { messageId: item.message_id, parsed, extraction };
       } catch (err) {
         if (err instanceof NeedsReconnectError) needsReconnect = true;

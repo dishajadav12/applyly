@@ -12,15 +12,30 @@ For example, a confirmation in May, an online assessment in June and an intervie
 
 Rescanning never creates duplicates, and your manual corrections are never overwritten.
 
-> **Status:** v1.0. All 11 build phases are complete. The full plan is in [PROJECT_SPEC.md](PROJECT_SPEC.md) and the build order is in [docs/prompts/](docs/prompts/).
+> **Status:** v1.0. All 12 build phases are complete (Phase 12's AI fallback is optional and off by default). The full plan is in [PROJECT_SPEC.md](PROJECT_SPEC.md) and the build order is in [docs/prompts/](docs/prompts/).
 
 ## Privacy
 
 - **Gmail scope is `gmail.readonly` only.** There are no send, modify or delete permissions. The app uses the Gmail REST API and never scrapes Gmail.
 - **Email bodies are never stored.** They are fetched, parsed in server memory and discarded. The database keeps only message IDs, subject, sender, the Gmail snippet (~200 characters) and the extracted fields.
-- **Email content goes only to Google and your own server.** No third-party service, and no LLM in v1.
+- **Email content goes only to Google and your own server, unless you opt into the AI fallback below** — off by default, and even then it never sees a full email.
 - **The Google refresh token is stored encrypted** (AES-256-GCM). It lives in a table reachable only with the server-side secret key, and it never stays in a browser cookie.
 - **Every user table has row-level security** (`user_id = auth.uid()`).
+
+### Optional AI fallback (off by default)
+
+Rule-based extraction (below) handles the overwhelming majority of emails and never sends anything to a third party. **Settings → AI fallback** lets you optionally turn on a secondary pass, used *only* for messages that are already classified as job-related but where the rules came up short — low classification confidence, or a missing company/role. High-confidence rule results are never sent for "improvement" and never overridden.
+
+When it runs, exactly one request is sent, containing exactly three fields and nothing else:
+- the email **subject**
+- the **sender** address
+- the **first 2 KB** of the already-normalized body text (never the full body, never attachments, never other emails)
+
+It goes to whichever provider you picked:
+- **Gemini** (`GEMINI_API_KEY`): Google's `generativelanguage.googleapis.com` API, free tier.
+- **Ollama** (`OLLAMA_BASE_URL`, default `http://localhost:11434`): a local model on your own machine — nothing leaves it.
+
+The response must be strict JSON — `{"company": string|null, "role": string|null, "eventType": string|null}` — validated with zod; anything else (extra fields, wrong shape, unparsable) is discarded and the rule-based result is used as-is. A returned field is only ever used to *fill in a gap*: it can set `company`/`role` when the rules left them blank, and can set `eventType` only when the rule-based classification was itself low-confidence. Any AI-sourced field is marked with `ai:gemini` or `ai:ollama` in that event's `reasons[]`, visible in `/debug` → Classify preview.
 
 ## How it works
 
@@ -106,6 +121,8 @@ npm run dev                  # http://localhost:3000
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | The Google OAuth web client also configured in Supabase |
 | `TOKEN_ENCRYPTION_KEY` | 32 random bytes, base64: `openssl rand -base64 32` |
 | `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` locally |
+| `GEMINI_API_KEY` | Optional — only needed to use the Gemini AI fallback (off by default) |
+| `OLLAMA_BASE_URL` / `OLLAMA_MODEL` | Optional — only needed to use the local Ollama AI fallback (off by default) |
 
 Full Supabase and Google Cloud setup instructions, including Vercel deployment, are in [SETUP.md](SETUP.md).
 
@@ -146,6 +163,7 @@ src/
     gmail/      token handling, API client, query builder, MIME parsing, deep links
     extract/    pure classification and extraction (no Supabase, fetch or Next imports)
     match/      pure matching and derivation
+    ai/         optional AI fallback (Gemini / Ollama), off by default
     scan/       scan start and step logic
     db/         generated types and typed repository helpers
   proxy.ts      session refresh and /dashboard protection

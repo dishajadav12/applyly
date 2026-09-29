@@ -1,11 +1,12 @@
 import { formatDistanceToNow } from "date-fns";
 import { AvatarMenu } from "@/components/avatar-menu";
 import { buttonVariants } from "@/components/ui/button";
+import type { AiProviderName } from "@/lib/config";
 import type { GmailConnection } from "@/lib/db/repo";
 
-type Props = { connection: GmailConnection | null; lastScanAt?: string | null };
+type Props = { connection: GmailConnection | null; lastScanAt?: string | null; aiProvider: AiProviderName | null };
 
-export function Header({ connection, lastScanAt }: Props) {
+export function Header({ connection, lastScanAt, aiProvider }: Props) {
   const active = connection?.status === "active";
 
   return (
@@ -25,7 +26,7 @@ export function Header({ connection, lastScanAt }: Props) {
         {lastScanAt && (
           <span className="text-muted-foreground">Last scanned {formatDistanceToNow(new Date(lastScanAt), { addSuffix: true })}</span>
         )}
-        <AvatarMenu hasConnection={Boolean(connection)} />
+        <AvatarMenu hasConnection={Boolean(connection)} aiProvider={aiProvider} />
       </div>
     </header>
   );

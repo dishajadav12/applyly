@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { applyAiFallback, getAiProvider, isAiEligible } from "@/lib/ai";
+import type { AiProviderName } from "@/lib/config";
 import { extractFromMessage } from "@/lib/extract";
+import { normalizeMessage } from "@/lib/extract/normalize";
 import { getUserSettings } from "@/lib/db/repo";
 import { createGmailClient, getMessage, pool } from "@/lib/gmail/client";
 import { buildQueries, listMessageIds, type QueryName } from "@/lib/gmail/query";
@@ -39,6 +42,10 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient();
   const [settings, connection] = await Promise.all([getUserSettings(supabase, userId), getGmailConnection(admin, userId)]);
   const context = { firstName: settings?.first_name ?? undefined, selfEmail: connection?.google_email };
+  // Phase 12: exercise the same (optional, off-by-default) AI fallback the real scan uses, so
+  // this preview shows what a scan would actually produce.
+  const aiProviderName: AiProviderName | null = settings?.ai_provider === "gemini" || settings?.ai_provider === "ollama" ? settings.ai_provider : null;
+  const aiProvider = getAiProvider(aiProviderName);
 
   const queries = buildQueries(new Date(rangeStart), new Date(rangeEnd));
   const client = createGmailClient({ getToken: (forceRefresh) => getAccessToken(userId, { forceRefresh }) });
@@ -50,7 +57,11 @@ export async function POST(request: NextRequest) {
     const rows = await pool(ids, FETCH_CONCURRENCY, async (id) => {
       const raw = await getMessage(client, id, { format: "full" });
       const parsedMessage = parseMessage(raw);
-      const result = extractFromMessage(parsedMessage, context);
+      let result = extractFromMessage(parsedMessage, context);
+      if (aiProvider && isAiEligible(result)) {
+        const { text } = normalizeMessage(parsedMessage);
+        result = await applyAiFallback(result, { subject: parsedMessage.subject, sender: parsedMessage.from, text }, aiProvider);
+      }
       return {
         messageId: id,
         subject: parsedMessage.subject,

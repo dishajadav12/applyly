@@ -366,3 +366,20 @@ export const EVENT_TYPE_LABELS = {
   withdrawal: "Withdrawal",
   other_update: "Update",
 } as const satisfies Record<EventType, string>;
+
+// ---------------------------------------------------------------------------
+// Phase 12: optional AI fallback (off by default)
+// ---------------------------------------------------------------------------
+
+/** A classification score below this counts as "low confidence" and is eligible for the AI fallback. */
+export const AI_LOW_CONFIDENCE_THRESHOLD = CLASSIFY_SCORE_THRESHOLD + 2;
+
+/** Only the first this many bytes of the (already-truncated) body are ever sent to an AI provider. */
+export const AI_TEXT_BYTES = 2 * 1024;
+
+export const AI_PROVIDERS = ["gemini", "ollama"] as const;
+export type AiProviderName = (typeof AI_PROVIDERS)[number];
+
+export const AI_GEMINI_MODEL = "gemini-2.0-flash";
+export const AI_OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434";
+export const AI_OLLAMA_DEFAULT_MODEL = "llama3.2";

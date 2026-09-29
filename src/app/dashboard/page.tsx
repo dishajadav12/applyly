@@ -38,10 +38,11 @@ export default async function DashboardPage() {
       : null;
 
   const neverScanned = applications.length === 0 && !settings?.last_scan_at;
+  const aiProvider = settings?.ai_provider === "gemini" || settings?.ai_provider === "ollama" ? settings.ai_provider : null;
 
   return (
     <>
-      <Header connection={connection} lastScanAt={settings?.last_scan_at} />
+      <Header connection={connection} lastScanAt={settings?.last_scan_at} aiProvider={aiProvider} />
       <main className="mx-auto w-full max-w-[1600px] space-y-6 p-8">
         <h1 className="text-xl font-semibold">Dashboard</h1>
         {connection?.status === "needs_reconnect" && <ReconnectBanner />}

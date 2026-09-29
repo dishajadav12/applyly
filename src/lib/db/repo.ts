@@ -43,6 +43,12 @@ export async function setLastScanAt(db: Db, userId: string, at: Date): Promise<v
   if (error) fail("setLastScanAt", error);
 }
 
+/** Phase 12: sets (or clears, with null) the user's AI fallback provider. Off by default. */
+export async function setAiProvider(db: Db, userId: string, provider: string | null): Promise<void> {
+  const { error } = await db.from("user_settings").update({ ai_provider: provider }).eq("user_id", userId);
+  if (error) fail("setAiProvider", error);
+}
+
 // --- gmail_connections (admin client only) ---------------------------------------
 
 export async function getGmailConnection(admin: Db, userId: string): Promise<GmailConnection | null> {

@@ -311,16 +311,19 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          ai_provider: string | null
           first_name: string | null
           last_scan_at: string | null
           user_id: string
         }
         Insert: {
+          ai_provider?: string | null
           first_name?: string | null
           last_scan_at?: string | null
           user_id: string
         }
         Update: {
+          ai_provider?: string | null
           first_name?: string | null
           last_scan_at?: string | null
           user_id?: string
