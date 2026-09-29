@@ -346,3 +346,20 @@ export const STATUS_DISPLAY_ORDER = [
   "Withdrawn",
   "Unknown",
 ] as const satisfies readonly Status[];
+
+// ---------------------------------------------------------------------------
+// A9: Detail panel / timeline
+// ---------------------------------------------------------------------------
+
+/** Human-readable timeline labels for each event_type (A9 detail panel). */
+export const EVENT_TYPE_LABELS = {
+  application_confirmation: "Application received",
+  recruiter_outreach: "Recruiter outreach",
+  assessment: "Assessment",
+  interview_invite: "Interview invite",
+  final_interview: "Final round",
+  offer: "Offer",
+  rejection: "Rejection",
+  withdrawal: "Withdrawal",
+  other_update: "Update",
+} as const satisfies Record<EventType, string>;

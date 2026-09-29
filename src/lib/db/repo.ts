@@ -119,6 +119,26 @@ export async function getApplicationsByCompanyKey(db: Db, companyKey: string): P
   return data;
 }
 
+/**
+ * Raw delete, no side effects on its events (A9 "Merge into…"): the caller must have already
+ * moved this application's events elsewhere. Deliberately distinct from the `delete_application`
+ * RPC used by the Delete action, which moves events to review — that would be wrong here, since
+ * the events were already reassigned to the merge target.
+ */
+export async function deleteApplicationRow(db: Db, id: string): Promise<void> {
+  const { error } = await db.from("applications").delete().eq("id", id);
+  if (error) fail("deleteApplicationRow", error);
+}
+
+/** A9 "Merge into…": moves every event off `fromApplicationId` onto `toApplicationId`, user-locked (D15). */
+export async function reassignApplicationEvents(db: Db, fromApplicationId: string, toApplicationId: string): Promise<void> {
+  const { error } = await db
+    .from("email_events")
+    .update({ application_id: toApplicationId, state: "linked", user_locked: true })
+    .eq("application_id", fromApplicationId);
+  if (error) fail("reassignApplicationEvents", error);
+}
+
 // --- email_events ------------------------------------------------------------
 
 export async function getEvent(db: Db, messageId: string): Promise<EmailEvent | null> {
@@ -170,6 +190,16 @@ export async function updateEvent(
 ): Promise<void> {
   const { error } = await db.from("email_events").update(patch).eq("message_id", messageId);
   if (error) fail("updateEvent", error);
+}
+
+/** A9 assign/move: attaches one event to an application, user-locked (D15). */
+export async function lockEventToApplication(db: Db, messageId: string, applicationId: string): Promise<void> {
+  await updateEvent(db, messageId, { application_id: applicationId, state: "linked", user_locked: true });
+}
+
+/** A9 review dialog "Dismiss": the email is not job-related; never re-added by a rescan (D15). */
+export async function dismissEvent(db: Db, messageId: string): Promise<void> {
+  await updateEvent(db, messageId, { state: "dismissed", user_locked: true });
 }
 
 // --- processed_messages ------------------------------------------------------

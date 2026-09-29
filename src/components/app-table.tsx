@@ -17,7 +17,7 @@ const STATUS_INDEX: Record<string, number> = Object.fromEntries(STATUS_DISPLAY_O
 const statusIndex = (status: string) => STATUS_INDEX[status] ?? STATUS_DISPLAY_ORDER.length;
 
 /** A9: server-fetched application rows, sorted/filtered/searched entirely client-side. */
-export function AppTable({ applications }: { applications: Application[] }) {
+export function AppTable({ applications, onSelect }: { applications: Application[]; onSelect: (id: string) => void }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("applied");
@@ -102,7 +102,7 @@ export function AppTable({ applications }: { applications: Application[] }) {
           </TableHeader>
           <TableBody>
             {sorted.map((app) => (
-              <TableRow key={app.id}>
+              <TableRow key={app.id} onClick={() => onSelect(app.id)} className="cursor-pointer">
                 <TableCell className="font-medium">
                   <span className="flex items-center gap-1.5">
                     {app.needs_review && <span className="size-1.5 shrink-0 rounded-full bg-amber-500" title="Needs review" />}
@@ -118,7 +118,11 @@ export function AppTable({ applications }: { applications: Application[] }) {
                 </TableCell>
                 <TableCell>
                   {app.primary_recruiter_email ? (
-                    <a href={`mailto:${app.primary_recruiter_email}`} className="text-primary underline-offset-2 hover:underline">
+                    <a
+                      href={`mailto:${app.primary_recruiter_email}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-primary underline-offset-2 hover:underline"
+                    >
                       {app.primary_recruiter_email}
                     </a>
                   ) : (

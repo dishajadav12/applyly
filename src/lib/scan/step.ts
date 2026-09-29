@@ -272,12 +272,16 @@ async function processJobRelatedEvent(
   return created;
 }
 
-function normalizeRoleKey(role: string): string {
+export function normalizeRoleKey(role: string): string {
   return role.trim().toLowerCase();
 }
 
-/** Recomputes an application's derived fields from its currently-linked events (A8), respecting overrides. */
-async function rederiveApplication(db: Db, applicationId: string): Promise<void> {
+/**
+ * Recomputes an application's derived fields from its currently-linked events (A8), respecting
+ * overrides. Exported for reuse by Phase 10's mutations (merge/move/assign/reset-to-auto all
+ * need to re-derive the applications they touch).
+ */
+export async function rederiveApplication(db: Db, applicationId: string): Promise<void> {
   const [app, events] = await Promise.all([repo.getApplication(db, applicationId), repo.listEventsForApplication(db, applicationId)]);
   if (!app) return;
 

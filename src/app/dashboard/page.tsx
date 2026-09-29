@@ -1,9 +1,9 @@
-import { AppTable } from "@/components/app-table";
+import { DashboardBody } from "@/components/dashboard-body";
 import { EmptyScanCta } from "@/components/empty-scan-cta";
 import { Header } from "@/components/header";
 import type { ActiveScan } from "@/components/scan-controls";
 import { ScanControls } from "@/components/scan-controls";
-import { getActiveScan, getGmailConnection, getUserSettings, listApplications } from "@/lib/db/repo";
+import { getActiveScan, getGmailConnection, getUserSettings, listApplications, listReviewEvents } from "@/lib/db/repo";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -13,14 +13,15 @@ export default async function DashboardPage() {
   const userId = data?.claims.sub;
 
   // gmail_connections is only reachable with the admin client (no RLS policies).
-  const [connection, settings, scan, applications] = userId
+  const [connection, settings, scan, applications, reviewEvents] = userId
     ? await Promise.all([
         getGmailConnection(createAdminClient(), userId),
         getUserSettings(supabase, userId),
         getActiveScan(supabase),
         listApplications(supabase),
+        listReviewEvents(supabase),
       ])
-    : [null, null, null, []];
+    : [null, null, null, [], []];
 
   const activeScan: ActiveScan | null =
     scan && (scan.status === "listing" || scan.status === "processing")
@@ -51,7 +52,7 @@ export default async function DashboardPage() {
             No applications found yet. Try scanning a wider range.
           </p>
         ) : (
-          <AppTable applications={applications} />
+          <DashboardBody applications={applications} reviewEvents={reviewEvents} googleEmail={connection?.google_email} />
         )}
       </main>
     </>
