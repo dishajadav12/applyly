@@ -67,11 +67,13 @@ export function ScanControls({ activeScan }: { activeScan: ActiveScan | null }) 
           }
 
           setCounters({ processed: body.processed, jobRelated: body.jobRelated, appsCreated: body.appsCreated, appsUpdated: body.appsUpdated, total: body.total });
+          // A9: refresh the (server-fetched) applications table after every step, not just at
+          // the end, so rows appear live while a scan runs.
+          router.refresh();
 
           if (body.done) {
             setPhase("done");
             toast.success(`Scan complete: ${body.jobRelated} job-related emails, ${body.appsCreated} new applications`);
-            router.refresh();
             return;
           }
         }

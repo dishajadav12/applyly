@@ -329,3 +329,20 @@ export const STATUS_RANK_BY_EVENT_TYPE = {
   interview_invite: STATUS_RANK.Interviewing,
   final_interview: STATUS_RANK["Final Round"],
 } as const satisfies Partial<Record<EventType, number>>;
+
+// ---------------------------------------------------------------------------
+// A9: Dashboard table
+// ---------------------------------------------------------------------------
+
+/** Pipeline order for the Status column sort and the status filter chips (A9). */
+export const STATUS_DISPLAY_ORDER = [
+  "Applied",
+  "Recruiter Contacted",
+  "Assessment",
+  "Interviewing",
+  "Final Round",
+  "Offer",
+  "Rejected",
+  "Withdrawn",
+  "Unknown",
+] as const satisfies readonly Status[];
