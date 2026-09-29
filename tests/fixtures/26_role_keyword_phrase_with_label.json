@@ -1,0 +1,19 @@
+{
+  "description": "Role extracted via the role-keyword fallback from a 'Role:' labeled line, not one of the four named patterns",
+  "input": {
+    "from": "talent@smallco.example",
+    "fromName": "SmallCo Talent",
+    "subject": "Thank you for applying to SmallCo",
+    "text": "Hi Jamie,\n\nRole: Backend Engineer, New Grad 2027\n\nThanks for your interest — we'll review your application and follow up soon."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": "SmallCo",
+    "companyKey": "smallco",
+    "role": "Backend Engineer, New Grad 2027",
+    "recruiterEmail": "talent@smallco.example",
+    "recruiterName": "SmallCo Talent",
+    "atsSource": null
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "description": "Indeed job-alert digest; must be classified not job-related",
+  "input": {
+    "from": "alerts@indeed.com",
+    "fromName": "Indeed",
+    "subject": "New jobs for you in Software Engineering",
+    "headers": {
+      "list-unsubscribe": "<mailto:unsub@indeed.com>"
+    },
+    "text": "New jobs for you:\n\nSoftware Engineer, New Grad 2027 - Acme\nData Analyst - Initech\n\nManage your job alert preferences anytime."
+  },
+  "expected": {
+    "isJobRelated": false,
+    "company": null,
+    "recruiterEmail": null
+  }
+}

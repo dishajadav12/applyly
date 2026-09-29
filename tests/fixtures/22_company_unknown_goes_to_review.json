@@ -1,0 +1,16 @@
+{
+  "description": "No ATS parser, no regex pattern, no alias match, no recruiter signal: company stays undefined for review",
+  "input": {
+    "from": "hr@obscurecorp.example",
+    "fromName": "Obscure Corp HR",
+    "subject": "Thank you for applying",
+    "text": "Hi Jordan,\n\nThank you for applying. We appreciate your interest and will be in touch if there's a fit."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": null,
+    "atsSource": null,
+    "recruiterEmail": null
+  }
+}

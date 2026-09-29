@@ -1,0 +1,17 @@
+{
+  "description": "Workday company confirmation where the tenant comes from the sender's local part (acme@myworkday.com)",
+  "input": {
+    "from": "acme@myworkday.com",
+    "fromName": "Workday Notifications",
+    "subject": "Application received",
+    "text": "Hi Priya,\n\nThank you for your recent application. Our recruiting team will review it and follow up soon."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": "Acme",
+    "companyKey": "acme",
+    "atsSource": "workday",
+    "recruiterEmail": null
+  }
+}

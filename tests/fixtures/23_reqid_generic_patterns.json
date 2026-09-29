@@ -1,0 +1,14 @@
+{
+  "description": "Requisition ID extraction from a generic 'Req ID:' pattern in the body",
+  "input": {
+    "from": "hr@acme.example",
+    "fromName": "Acme HR",
+    "subject": "Thank you for applying for the Software Engineer role",
+    "text": "Hi Priya,\n\nThank you for your application for the Software Engineer role. Req ID: 98765. We'll be in touch soon."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "role": "Software Engineer",
+    "reqId": "Req ID: 98765"
+  }
+}

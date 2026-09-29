@@ -1,0 +1,18 @@
+{
+  "description": "Lever final-round / virtual onsite invite",
+  "input": {
+    "from": "notify@lever.co",
+    "fromName": "Initech",
+    "subject": "Your virtual onsite with Initech",
+    "text": "Hi Alex,\n\nWe're excited to invite you to a virtual onsite for the Site Reliability Engineer role. Please find the schedule below."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "final_interview",
+    "company": "Initech",
+    "companyKey": "initech",
+    "role": "Site Reliability Engineer",
+    "atsSource": "lever",
+    "recruiterEmail": null
+  }
+}

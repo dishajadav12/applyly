@@ -1,0 +1,17 @@
+{
+  "description": "Greenhouse sender whose display name is generic; company comes from the subject 'application to/at X' pattern instead",
+  "input": {
+    "from": "no-reply@greenhouse.io",
+    "fromName": "Greenhouse",
+    "subject": "Your application to Acme Corp",
+    "text": "Hi Priya,\n\nThank you for applying. We've received your application and will follow up with next steps soon."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": "Acme",
+    "companyKey": "acme",
+    "atsSource": "greenhouse",
+    "recruiterEmail": null
+  }
+}

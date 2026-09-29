@@ -1,0 +1,16 @@
+{
+  "description": "Sender domain resolved through the COMPANY_ALIASES map (amazon.jobs -> Amazon)",
+  "input": {
+    "from": "no-reply@amazon.jobs",
+    "fromName": "Amazon Jobs",
+    "subject": "Application received",
+    "text": "Hi Priya,\n\nThank you for your recent application. We'll review it and reach out if there's a match."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": "Amazon",
+    "companyKey": "amazon",
+    "atsSource": null
+  }
+}

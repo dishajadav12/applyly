@@ -1,0 +1,18 @@
+{
+  "description": "Lever rejection using a direct REJECTION_PHRASES match",
+  "input": {
+    "from": "talent@lever.co",
+    "fromName": "Globex Talent",
+    "subject": "Update on your application to Globex",
+    "text": "Hi Jordan,\n\nThank you for taking the time to interview with Globex for the Data Analyst position. After careful consideration, we've decided to move forward with other candidates for this role."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "rejection",
+    "company": "Globex",
+    "companyKey": "globex",
+    "role": "Data Analyst",
+    "atsSource": "lever",
+    "recruiterEmail": null
+  }
+}

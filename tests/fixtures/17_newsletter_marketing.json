@@ -1,0 +1,15 @@
+{
+  "description": "Generic marketing newsletter with an unsubscribe header; must be classified not job-related",
+  "input": {
+    "from": "news@saasproduct.example",
+    "fromName": "SaaSProduct Newsletter",
+    "subject": "This month's product updates + a webinar invite",
+    "headers": { "list-unsubscribe": "<mailto:unsub@saasproduct.example>" },
+    "text": "Hey there,\n\nCheck out our latest newsletter with product updates, an upcoming webinar, and a 20% off sale on annual plans."
+  },
+  "expected": {
+    "isJobRelated": false,
+    "company": null,
+    "role": null
+  }
+}

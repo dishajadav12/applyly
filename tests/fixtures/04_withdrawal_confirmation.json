@@ -1,0 +1,19 @@
+{
+  "description": "Withdrawal confirmation from a non-ATS sender; role is a generic filler word and must stay undefined",
+  "input": {
+    "from": "talent@bigco.example",
+    "fromName": "BigCo Talent",
+    "subject": "We've received your request to withdraw your application for the position at BigCo Corp",
+    "text": "Hi Sam,\n\nThis confirms that we have withdrawn your application for the position at BigCo Corp, as you requested. If this was a mistake, please let us know within 5 business days."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "withdrawal",
+    "company": "BigCo",
+    "companyKey": "bigco",
+    "role": null,
+    "atsSource": null,
+    "recruiterEmail": "talent@bigco.example",
+    "recruiterName": "BigCo Talent"
+  }
+}

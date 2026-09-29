@@ -1,0 +1,18 @@
+{
+  "description": "HackerRank assessment invite, company from the 'X has invited you' pattern",
+  "input": {
+    "from": "no-reply@hackerrank.com",
+    "fromName": "HackerRank",
+    "subject": "You've been invited to complete an assessment",
+    "text": "Hi Priya,\n\nAcme Corp has invited you to complete a coding assessment for the Backend Engineer role. You'll have 90 minutes once you begin."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "assessment",
+    "company": "Acme",
+    "companyKey": "acme",
+    "role": "Backend Engineer",
+    "atsSource": "assessment",
+    "recruiterEmail": null
+  }
+}

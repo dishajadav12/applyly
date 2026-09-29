@@ -1,0 +1,17 @@
+{
+  "description": "Lever sender display name with a 'Recruiting' suffix that must be stripped for the company name",
+  "input": {
+    "from": "jobs@lever.co",
+    "fromName": "Stripe Recruiting",
+    "subject": "Thanks for your interest",
+    "text": "Hi Jordan,\n\nThank you for your recent application. We appreciate your interest in Stripe and will follow up soon."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": "Stripe",
+    "companyKey": "stripe",
+    "atsSource": "lever",
+    "recruiterEmail": null
+  }
+}

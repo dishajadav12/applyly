@@ -1,0 +1,18 @@
+{
+  "description": "gmail.com recruiter outreach; freemail domain is allowed for recruiter detection (unlike company alias matching)",
+  "context": { "firstName": "Priya" },
+  "input": {
+    "from": "fakerecruiter123@gmail.com",
+    "fromName": "Jamie Fake",
+    "subject": "Exciting opportunity",
+    "text": "Hi Priya,\n\nI'm a talent sourcer working with a few startups and came across your profile. I have an exciting opportunity that involves next steps I think you'd like. Let me know if you're interested!"
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "recruiter_outreach",
+    "recruiterEmail": "fakerecruiter123@gmail.com",
+    "recruiterName": "Jamie Fake",
+    "company": null,
+    "atsSource": null
+  }
+}

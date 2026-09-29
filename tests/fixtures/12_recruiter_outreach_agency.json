@@ -1,0 +1,20 @@
+{
+  "description": "Agency recruiter outreach; recruiter allowed despite being a non-ATS third-party domain",
+  "context": {
+    "firstName": "Sam"
+  },
+  "input": {
+    "from": "jamie.fake@eliterecruiting.example",
+    "fromName": "Jamie Fake, Technical Recruiter",
+    "subject": "Quick question about your background",
+    "text": "Hi Sam,\n\nI'm reaching out about next steps for the Software Engineer, New Grad 2027 role at Acme that I think could be a great fit. Would you be open to a quick call this week?"
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "recruiter_outreach",
+    "recruiterEmail": "jamie.fake@eliterecruiting.example",
+    "recruiterName": "Jamie Fake, Technical Recruiter",
+    "role": "Software Engineer, New Grad 2027",
+    "atsSource": null
+  }
+}

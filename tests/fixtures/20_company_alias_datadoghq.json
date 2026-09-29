@@ -1,0 +1,16 @@
+{
+  "description": "Sender domain resolved through the COMPANY_ALIASES map (datadoghq -> Datadog)",
+  "input": {
+    "from": "recruiting@datadoghq.example",
+    "fromName": "Datadog Talent Team",
+    "subject": "Thanks for applying",
+    "text": "Hi Sam,\n\nThank you for applying. We've received your application and will follow up with next steps soon."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": "Datadog",
+    "companyKey": "datadog",
+    "atsSource": null
+  }
+}

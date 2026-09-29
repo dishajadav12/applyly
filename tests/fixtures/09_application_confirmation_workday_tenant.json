@@ -1,0 +1,18 @@
+{
+  "description": "Workday tenant-subdomain confirmation; company from the subdomain, role from the dash pattern",
+  "input": {
+    "from": "no-reply@acme.wd5.myworkdayjobs.com",
+    "fromName": "Acme Careers",
+    "subject": "Software Engineer, New Grad 2027 – Application Received",
+    "text": "Hi Priya,\n\nThank you for your recent application. Our team will review your submission and follow up soon."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": "Acme",
+    "companyKey": "acme",
+    "role": "Software Engineer, New Grad 2027",
+    "atsSource": "workday",
+    "recruiterEmail": null
+  }
+}

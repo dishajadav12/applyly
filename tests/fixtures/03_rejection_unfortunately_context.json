@@ -1,0 +1,18 @@
+{
+  "description": "Rejection via the 'unfortunately' + application-context fallback, not a direct phrase",
+  "input": {
+    "from": "careers@acme.example",
+    "fromName": "Acme Careers",
+    "subject": "Your application for the Software Engineer role",
+    "text": "Hi Alex,\n\nThank you for your application for the Software Engineer role. Unfortunately, we have decided not to move forward with your candidacy for this position at Acme Inc."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "rejection",
+    "company": "Acme",
+    "companyKey": "acme",
+    "role": "Software Engineer",
+    "atsSource": null,
+    "recruiterEmail": null
+  }
+}

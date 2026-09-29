@@ -1,0 +1,19 @@
+{
+  "description": "Greenhouse offer email, company from sender display name",
+  "input": {
+    "from": "recruiting@greenhouse-mail.io",
+    "fromName": "Acme Recruiting",
+    "subject": "Congratulations on your offer!",
+    "text": "Hi Priya,\n\nWe are pleased to extend an offer for the Software Engineer, New Grad 2027 position at Acme. Your offer letter is attached below with all the details.\n\nWelcome to the team!"
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "offer",
+    "company": "Acme",
+    "companyKey": "acme",
+    "role": "Software Engineer, New Grad 2027",
+    "atsSource": "greenhouse",
+    "recruiterEmail": null,
+    "reqId": null
+  }
+}

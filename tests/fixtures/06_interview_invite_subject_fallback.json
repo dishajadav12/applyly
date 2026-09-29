@@ -1,0 +1,18 @@
+{
+  "description": "Interview invite detected via the bare 'interview' subject fallback, not a phrase match",
+  "input": {
+    "from": "jobs@lever.co",
+    "fromName": "Acme Recruiting",
+    "subject": "Interview with Acme",
+    "text": "Hi Priya,\n\nWe'd love to find some time to speak about the Software Engineer, New Grad 2027 opportunity at Acme. Let us know your availability this week and we'll get something set up."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "interview_invite",
+    "company": "Acme",
+    "companyKey": "acme",
+    "role": null,
+    "atsSource": "lever",
+    "recruiterEmail": null
+  }
+}

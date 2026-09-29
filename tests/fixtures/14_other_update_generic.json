@@ -1,0 +1,15 @@
+{
+  "description": "Job-related status update that fits no specific stage; falls back to other_update",
+  "context": { "firstName": "Jordan" },
+  "input": {
+    "from": "updates@acme.example",
+    "fromName": "Acme Updates",
+    "subject": "A quick note",
+    "text": "Hi Jordan, just a quick note — we're still reviewing candidates and will follow up soon. You can check your status here: boards.greenhouse.io/candidate/status"
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "other_update",
+    "atsSource": null
+  }
+}

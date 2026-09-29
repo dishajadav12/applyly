@@ -1,0 +1,16 @@
+{
+  "description": "A role-position pattern matches but the capture exceeds MAX_ROLE_LENGTH; role must stay undefined",
+  "input": {
+    "from": "hr@acme.example",
+    "fromName": "Acme HR",
+    "subject": "Application update",
+    "text": "Hi Sam,\n\nWe wanted to reach out about next steps for the extremely amazing brand new opportunity that spans backend infrastructure work platform reliability tooling and internal developer experience across every team in the organization role at Acme. More details soon."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "role": null
+  },
+  "context": {
+    "firstName": "Sam"
+  }
+}

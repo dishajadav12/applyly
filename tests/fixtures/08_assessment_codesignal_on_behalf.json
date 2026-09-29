@@ -1,0 +1,18 @@
+{
+  "description": "CodeSignal assessment, company from the 'on behalf of X' pattern",
+  "input": {
+    "from": "assessments@codesignal.com",
+    "fromName": "CodeSignal",
+    "subject": "Your technical assessment is ready",
+    "text": "Hi Jordan,\n\nOn behalf of Initech, we're inviting you to complete a technical assessment for the Data Engineer position. Good luck!"
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "assessment",
+    "company": "Initech",
+    "companyKey": "initech",
+    "role": "Data Engineer",
+    "atsSource": "assessment",
+    "recruiterEmail": null
+  }
+}

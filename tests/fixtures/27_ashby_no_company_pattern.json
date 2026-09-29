@@ -1,0 +1,16 @@
+{
+  "description": "Ashby sender with no 'X Hiring Team' pattern anywhere; company stays undefined but atsSource is still recorded",
+  "input": {
+    "from": "notifications@ashbyhq.com",
+    "fromName": "Ashby Notifications",
+    "subject": "Application received",
+    "text": "Hi Sam,\n\nThank you for your recent application. We'll be in touch with next steps."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": null,
+    "atsSource": "ashby",
+    "recruiterEmail": null
+  }
+}

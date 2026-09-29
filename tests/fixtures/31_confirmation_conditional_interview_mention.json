@@ -1,0 +1,19 @@
+{
+  "description": "Real-world case: an application confirmation that previews a possible future interview conditionally ('if your skills are a strong match... we will schedule an interview'); must not be misread as interview_invite",
+  "context": { "firstName": "Jamie" },
+  "input": {
+    "from": "talent@contoso.example",
+    "fromName": "Contoso Talent Team",
+    "subject": "Thank you for your application",
+    "text": "Hi Jamie,\n\nThanks for your interest in the Software Engineer, Early Career 2027 role at Contoso.\n\nYour application has been received and we will review it within the next few days.\n\nIf your skills and experience are a strong match for the role, a member of our team will reach out to you to schedule an interview for a conversation.\n\nRegards,\nContoso Talent Team"
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": null,
+    "role": null,
+    "atsSource": null,
+    "recruiterEmail": "talent@contoso.example",
+    "recruiterName": "Contoso Talent Team"
+  }
+}

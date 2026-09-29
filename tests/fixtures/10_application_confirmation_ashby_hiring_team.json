@@ -1,0 +1,18 @@
+{
+  "description": "Ashby confirmation, company from the 'X Hiring Team' pattern in the sender name",
+  "input": {
+    "from": "notifications@ashbyhq.com",
+    "fromName": "Nimbus Hiring Team",
+    "subject": "Thanks for applying!",
+    "text": "Hi Jordan,\n\nThank you for applying to Nimbus. We've received your application and will be in touch with next steps soon."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": "Nimbus",
+    "companyKey": "nimbus",
+    "role": null,
+    "atsSource": "ashby",
+    "recruiterEmail": null
+  }
+}

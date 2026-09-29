@@ -1,0 +1,18 @@
+{
+  "description": "Generic confirmation with no role mentioned anywhere; role must stay undefined",
+  "input": {
+    "from": "hello@smallstartup.example",
+    "fromName": "SmallStartup",
+    "subject": "We received your application",
+    "text": "Hi Sam,\n\nThank you for applying to SmallStartup. We're reviewing applications on a rolling basis and will reach out if there's a fit."
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": "SmallStartup",
+    "companyKey": "smallstartup",
+    "role": null,
+    "atsSource": null,
+    "recruiterEmail": null
+  }
+}

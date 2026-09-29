@@ -1,0 +1,17 @@
+{
+  "description": "Requisition ID extraction from a gh_jid= tracking parameter in a Greenhouse email",
+  "input": {
+    "from": "no-reply@greenhouse.io",
+    "fromName": "Nimbus",
+    "subject": "Your application to Nimbus",
+    "text": "Hi Jordan,\n\nThank you for applying. View your application: https://boards.greenhouse.io/nimbus/jobs/123?gh_jid=4567890"
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": "Nimbus",
+    "companyKey": "nimbus",
+    "atsSource": "greenhouse",
+    "reqId": "gh_jid=4567890"
+  }
+}

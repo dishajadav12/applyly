@@ -1,0 +1,15 @@
+{
+  "description": "Substack-style newsletter unrelated to jobs; must be classified not job-related",
+  "input": {
+    "from": "writer@example.substack.com",
+    "fromName": "Weekly Tech Digest",
+    "subject": "Issue #42: AI, startups, and more",
+    "headers": { "list-unsubscribe": "<mailto:unsub@example.substack.com>" },
+    "text": "This week's newsletter covers the latest in AI and startup news. Thanks for reading and see you next week!"
+  },
+  "expected": {
+    "isJobRelated": false,
+    "company": null,
+    "role": null
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "description": "LinkedIn job-alert digest; must be classified not job-related",
+  "input": {
+    "from": "jobalerts-noreply@linkedin.com",
+    "fromName": "LinkedIn Job Alerts",
+    "subject": "New jobs for you: Software Engineer roles",
+    "headers": {
+      "list-unsubscribe": "<mailto:unsub@linkedin.com>"
+    },
+    "text": "Jobs you may be interested in:\n\nSoftware Engineer at Acme\nBackend Developer at Globex\n\nSee more recommended jobs on LinkedIn."
+  },
+  "expected": {
+    "isJobRelated": false,
+    "company": null,
+    "recruiterEmail": null
+  }
+}
