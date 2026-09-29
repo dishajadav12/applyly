@@ -284,3 +284,48 @@ export const STATUS_RANK = {
   Interviewing: 40,
   "Final Round": 50,
 } as const;
+
+/** applications.status (A5 TS type). */
+export type Status =
+  | "Applied"
+  | "Recruiter Contacted"
+  | "Assessment"
+  | "Interviewing"
+  | "Final Round"
+  | "Offer"
+  | "Rejected"
+  | "Withdrawn"
+  | "Unknown";
+
+/** "Terminal" (A8): a stage event of this type ends the application, unless a later stage event reopens it. */
+export const TERMINAL_STATUS_BY_EVENT_TYPE = {
+  offer: "Offer",
+  rejection: "Rejected",
+  withdrawal: "Withdrawn",
+} as const satisfies Partial<Record<EventType, Status>>;
+
+export const TERMINAL_STATUSES = Object.values(TERMINAL_STATUS_BY_EVENT_TYPE);
+
+/**
+ * Stage events (A8): the ones whose latest-dated occurrence decides whether an
+ * application is terminal, and whose later occurrence can reopen it. application_confirmation,
+ * recruiter_outreach, and other_update are deliberately excluded (not stage events), though
+ * confirmation/recruiter_outreach still contribute to the status-rank fallback below.
+ */
+export const STAGE_EVENT_TYPES = [
+  "assessment",
+  "interview_invite",
+  "final_interview",
+  "offer",
+  "rejection",
+  "withdrawal",
+] as const satisfies readonly EventType[];
+
+/** Status rank contributed by each non-terminal event type, for the "highest-ranked stage seen" fallback (A8). */
+export const STATUS_RANK_BY_EVENT_TYPE = {
+  application_confirmation: STATUS_RANK.Applied,
+  recruiter_outreach: STATUS_RANK["Recruiter Contacted"],
+  assessment: STATUS_RANK.Assessment,
+  interview_invite: STATUS_RANK.Interviewing,
+  final_interview: STATUS_RANK["Final Round"],
+} as const satisfies Partial<Record<EventType, number>>;
