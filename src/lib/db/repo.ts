@@ -112,6 +112,13 @@ export async function deleteApplication(db: Db, id: string): Promise<void> {
   if (error) fail("deleteApplication", error);
 }
 
+/** For the matcher's company-key rules (M3–M6). */
+export async function getApplicationsByCompanyKey(db: Db, companyKey: string): Promise<Application[]> {
+  const { data, error } = await db.from("applications").select("*").eq("company_key", companyKey);
+  if (error) fail("getApplicationsByCompanyKey", error);
+  return data;
+}
+
 // --- email_events ------------------------------------------------------------
 
 export async function getEvent(db: Db, messageId: string): Promise<EmailEvent | null> {
@@ -127,6 +134,13 @@ export async function listEventsForApplication(db: Db, applicationId: string): P
     .eq("application_id", applicationId)
     .order("received_at", { ascending: true });
   if (error) fail("listEventsForApplication", error);
+  return data;
+}
+
+/** For the matcher's M1 (same-thread) check. */
+export async function getEventsByThread(db: Db, threadId: string): Promise<EmailEvent[]> {
+  const { data, error } = await db.from("email_events").select("*").eq("thread_id", threadId);
+  if (error) fail("getEventsByThread", error);
   return data;
 }
 
@@ -179,6 +193,22 @@ export async function markProcessed(db: Db, rows: TablesInsert<"processed_messag
   if (rows.length === 0) return;
   const { error } = await db.from("processed_messages").upsert(rows, { onConflict: "user_id,message_id" });
   if (error) fail("markProcessed", error);
+}
+
+/**
+ * "Re-process all": deletes processed_messages rows stamped with an older PARSER_VERSION, so the
+ * next scan re-fetches and re-extracts those message IDs. Rows already at the current version are
+ * left alone (a scan is otherwise a no-op the second time it covers the same range).
+ */
+export async function deleteStaleProcessedMessages(db: Db, userId: string, currentParserVersion: number): Promise<number> {
+  const { data, error } = await db
+    .from("processed_messages")
+    .delete()
+    .eq("user_id", userId)
+    .neq("parser_version", currentParserVersion)
+    .select("message_id");
+  if (error) fail("deleteStaleProcessedMessages", error);
+  return data.length;
 }
 
 // --- scans -------------------------------------------------------------------
@@ -256,6 +286,22 @@ export async function getPendingScanItems(db: Db, scanId: string, limit: number)
     .limit(limit);
   if (error) fail("getPendingScanItems", error);
   return data;
+}
+
+/**
+ * Authoritative item counts for a scan, straight from scan_items. A step interrupted
+ * mid-run (e.g. the tab was reloaded) can leave scans.processed stale even though every
+ * scan_items row in its batch was in fact marked done; this is what reconciles it before
+ * a scan is marked done, so the final numbers shown always match reality.
+ */
+export async function countScanItemStatuses(db: Db, scanId: string): Promise<{ total: number; pending: number }> {
+  const [total, pending] = await Promise.all([
+    db.from("scan_items").select("*", { count: "exact", head: true }).eq("scan_id", scanId),
+    db.from("scan_items").select("*", { count: "exact", head: true }).eq("scan_id", scanId).eq("status", "pending"),
+  ]);
+  if (total.error) fail("countScanItemStatuses", total.error);
+  if (pending.error) fail("countScanItemStatuses", pending.error);
+  return { total: total.count ?? 0, pending: pending.count ?? 0 };
 }
 
 export async function markScanItem(

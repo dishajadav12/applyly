@@ -1,10 +1,11 @@
-import { DisconnectButton } from "@/components/disconnect-button";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { formatDistanceToNow } from "date-fns";
+import { AvatarMenu } from "@/components/avatar-menu";
+import { buttonVariants } from "@/components/ui/button";
 import type { GmailConnection } from "@/lib/db/repo";
 
-type Props = { connection: GmailConnection | null };
+type Props = { connection: GmailConnection | null; lastScanAt?: string | null };
 
-export function Header({ connection }: Props) {
+export function Header({ connection, lastScanAt }: Props) {
   const active = connection?.status === "active";
 
   return (
@@ -21,12 +22,10 @@ export function Header({ connection }: Props) {
             {connection ? "Reconnect Gmail" : "Connect Gmail"}
           </a>
         )}
-        {connection && <DisconnectButton />}
-        <form action="/auth/sign-out" method="post">
-          <Button type="submit" variant="ghost" size="sm">
-            Sign out
-          </Button>
-        </form>
+        {lastScanAt && (
+          <span className="text-muted-foreground">Last scanned {formatDistanceToNow(new Date(lastScanAt), { addSuffix: true })}</span>
+        )}
+        <AvatarMenu hasConnection={Boolean(connection)} />
       </div>
     </header>
   );
