@@ -1,6 +1,7 @@
 import { DashboardBody } from "@/components/dashboard-body";
 import { EmptyScanCta } from "@/components/empty-scan-cta";
 import { Header } from "@/components/header";
+import { ReconnectBanner } from "@/components/reconnect-banner";
 import type { ActiveScan } from "@/components/scan-controls";
 import { ScanControls } from "@/components/scan-controls";
 import { getActiveScan, getGmailConnection, getUserSettings, listApplications, listReviewEvents } from "@/lib/db/repo";
@@ -43,6 +44,7 @@ export default async function DashboardPage() {
       <Header connection={connection} lastScanAt={settings?.last_scan_at} />
       <main className="mx-auto w-full max-w-[1600px] space-y-6 p-8">
         <h1 className="text-xl font-semibold">Dashboard</h1>
+        {connection?.status === "needs_reconnect" && <ReconnectBanner />}
         <ScanControls activeScan={activeScan} />
 
         {neverScanned ? (

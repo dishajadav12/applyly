@@ -9,6 +9,9 @@ export const CLASSIFY_SCORE_THRESHOLD = 3;
 /** Maximum messages processed by a single scan step request. */
 export const SCAN_STEP_BATCH_SIZE = 40;
 
+/** Phase 11: minimum gap between scan starts for one user, so repeated clicks can't spam Gmail/the DB. */
+export const SCAN_START_RATE_LIMIT_MS = 10_000;
+
 /** Body text is truncated to this many bytes after decoding. */
 export const MAX_BODY_BYTES = 15 * 1024;
 

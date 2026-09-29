@@ -249,6 +249,13 @@ export async function getScan(db: Db, id: string): Promise<Scan | null> {
   return data;
 }
 
+/** Phase 11 rate limiting: when this user's most recent scan (any status) was started. */
+export async function getLastScanStartedAt(db: Db): Promise<string | null> {
+  const { data, error } = await db.from("scans").select("started_at").order("started_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) fail("getLastScanStartedAt", error);
+  return data?.started_at ?? null;
+}
+
 export async function getActiveScan(db: Db): Promise<Scan | null> {
   const { data, error } = await db
     .from("scans")
@@ -324,14 +331,16 @@ export async function getPendingScanItems(db: Db, scanId: string, limit: number)
  * scan_items row in its batch was in fact marked done; this is what reconciles it before
  * a scan is marked done, so the final numbers shown always match reality.
  */
-export async function countScanItemStatuses(db: Db, scanId: string): Promise<{ total: number; pending: number }> {
-  const [total, pending] = await Promise.all([
+export async function countScanItemStatuses(db: Db, scanId: string): Promise<{ total: number; pending: number; error: number }> {
+  const [total, pending, errored] = await Promise.all([
     db.from("scan_items").select("*", { count: "exact", head: true }).eq("scan_id", scanId),
     db.from("scan_items").select("*", { count: "exact", head: true }).eq("scan_id", scanId).eq("status", "pending"),
+    db.from("scan_items").select("*", { count: "exact", head: true }).eq("scan_id", scanId).eq("status", "error"),
   ]);
   if (total.error) fail("countScanItemStatuses", total.error);
   if (pending.error) fail("countScanItemStatuses", pending.error);
-  return { total: total.count ?? 0, pending: pending.count ?? 0 };
+  if (errored.error) fail("countScanItemStatuses", errored.error);
+  return { total: total.count ?? 0, pending: pending.count ?? 0, error: errored.count ?? 0 };
 }
 
 export async function markScanItem(
@@ -347,4 +356,16 @@ export async function markScanItem(
     .eq("scan_id", scanId)
     .eq("message_id", messageId);
   if (error) fail("markScanItem", error);
+}
+
+/** Phase 11 "retry failed items": resets a scan's errored items back to pending. Returns how many. */
+export async function resetFailedScanItems(db: Db, scanId: string): Promise<number> {
+  const { data, error } = await db
+    .from("scan_items")
+    .update({ status: "pending", error: null })
+    .eq("scan_id", scanId)
+    .eq("status", "error")
+    .select("message_id");
+  if (error) fail("resetFailedScanItems", error);
+  return data.length;
 }

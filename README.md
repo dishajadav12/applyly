@@ -12,7 +12,7 @@ For example, a confirmation in May, an online assessment in June and an intervie
 
 Rescanning never creates duplicates, and your manual corrections are never overwritten.
 
-> **Status:** early development. Phase 1 (scaffold) is complete. The full plan is in [PROJECT_SPEC.md](PROJECT_SPEC.md) and the build order is in [docs/prompts/](docs/prompts/).
+> **Status:** v1.0. All 11 build phases are complete. The full plan is in [PROJECT_SPEC.md](PROJECT_SPEC.md) and the build order is in [docs/prompts/](docs/prompts/).
 
 ## Privacy
 
@@ -75,6 +75,8 @@ Fields you edit are stored in `overrides` and never overwritten. Events you assi
 ### 6. Dashboard
 A sortable, searchable table with status filters. Clicking a row opens a panel with editable fields, an email timeline with **Open in Gmail** links, and merge, move and delete actions. A banner lists emails that need review.
 
+**Keyboard shortcuts:** `/` focuses the search box; `Esc` closes the open panel or dialog.
+
 ## Tech stack
 
 - Next.js 16 (App Router, TypeScript strict). Request interception is in `src/proxy.ts`, not `middleware.ts`.
@@ -105,7 +107,7 @@ npm run dev                  # http://localhost:3000
 | `TOKEN_ENCRYPTION_KEY` | 32 random bytes, base64: `openssl rand -base64 32` |
 | `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` locally |
 
-Supabase and Google Cloud setup instructions will be written in `SETUP.md` in Phase 2.
+Full Supabase and Google Cloud setup instructions, including Vercel deployment, are in [SETUP.md](SETUP.md).
 
 ### Google OAuth mode
 The app is designed to stay in Google's **Testing** mode with you as the only test user. Testing-mode refresh tokens expire after 7 days, so the app shows a one-click **Reconnect Gmail** banner when that happens.
@@ -116,11 +118,21 @@ The app is designed to stay in Google's **Testing** mode with you as the only te
 |---|---|
 | `npm run dev` | Start the dev server |
 | `npm run build` | Production build |
+| `npm start` | Run a production build (after `npm run build`) |
 | `npm test` | Run Vitest |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
 | `npm run db:types` | Generate `src/lib/db/types.gen.ts` from the linked Supabase project |
 | `npx supabase db push` | Apply migrations |
+| `npm run check:env` | Validate required environment variables |
+
+## Troubleshooting
+
+- **No refresh token returned on sign-in.** Google only issues a refresh token on the *first* consent, or when you explicitly re-request consent. Revoke the app at [myaccount.google.com/permissions](https://myaccount.google.com/permissions) and sign in again — the app also does this automatically once and shows a clear error if it still doesn't get one.
+- **"Gmail read access is required" after signing in.** The Gmail permission checkbox was unticked on Google's consent screen. Click **Reconnect Gmail**, and make sure the Gmail checkbox stays ticked this time.
+- **Reconnect banner appears after about a week.** Expected in Google's OAuth **Testing** mode (the default, per `docs/DECISIONS.md` D17): refresh tokens expire after 7 days. Click **Reconnect Gmail** — it's one click and reuses your existing Google session. See `SETUP.md` for the optional "In production, unverified" mode that avoids this.
+- **Sign-in or scans suddenly fail with a database/network error.** Free Supabase projects pause after about a week of inactivity. Open the project in the [Supabase dashboard](https://supabase.com/dashboard) and restore it; the app resumes working immediately, no re-deploy needed.
+- **A scan step fails repeatedly.** Gmail quota errors and transient network errors are retried automatically with backoff (`src/lib/gmail/client.ts`). If a scan still ends with failed items, the dashboard shows a **Retry failed items** button; individual message fetch failures don't block the rest of the scan.
 
 ## Project layout
 

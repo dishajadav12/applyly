@@ -16,11 +16,18 @@ const FETCH_CONCURRENCY = 8;
 /** Gmail snippets are ~200 chars already; this is a hard ceiling so nothing longer is ever stored. */
 const MAX_SNIPPET_CHARS = 200;
 
-export type StepCounters = { processed: number; jobRelated: number; appsCreated: number; appsUpdated: number; total: number };
+export type StepCounters = { processed: number; jobRelated: number; appsCreated: number; appsUpdated: number; total: number; failed: number };
 export type StepResult = ({ done: boolean } & StepCounters) | { busy: true };
 
-function toCounters(scan: Scan): StepCounters {
-  return { processed: scan.processed, jobRelated: scan.job_related, appsCreated: scan.apps_created, appsUpdated: scan.apps_updated, total: scan.total };
+function toCounters(scan: Scan, failed = 0): StepCounters {
+  return {
+    processed: scan.processed,
+    jobRelated: scan.job_related,
+    appsCreated: scan.apps_created,
+    appsUpdated: scan.apps_updated,
+    total: scan.total,
+    failed,
+  };
 }
 
 /**
@@ -31,7 +38,10 @@ function toCounters(scan: Scan): StepCounters {
 export async function stepScan(db: Db, userId: string, scanId: string): Promise<StepResult> {
   const scan = await repo.getScan(db, scanId);
   if (!scan || scan.user_id !== userId) throw new Error("Scan not found");
-  if (scan.status !== "processing") return { done: true, ...toCounters(scan) };
+  if (scan.status !== "processing") {
+    const { error: failedCount } = await repo.countScanItemStatuses(db, scanId);
+    return { done: true, ...toCounters(scan, failedCount) };
+  }
 
   const lockToken = await repo.claimScanLease(db, scanId);
   if (!lockToken) return { busy: true };
@@ -40,9 +50,9 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
     const items = await repo.getPendingScanItems(db, scanId, SCAN_STEP_BATCH_SIZE);
 
     if (items.length === 0) {
-      await reconcileProcessedCount(db, scanId, scan);
+      const { error: failedCount } = await reconcileProcessedCount(db, scanId, scan);
       await finishScan(db, userId, scanId);
-      return { done: true, ...toCounters((await repo.getScan(db, scanId))!) };
+      return { done: true, ...toCounters((await repo.getScan(db, scanId))!, failedCount) };
     }
 
     const admin = createAdminClient();
@@ -111,6 +121,8 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
       appsCreated: scan.apps_created + appsCreatedDelta,
       appsUpdated: scan.apps_updated + appsUpdatedDelta,
       total: scan.total,
+      // Only known once the scan finishes (below); left at 0 for in-progress steps.
+      failed: 0,
     };
     await repo.updateScan(db, scanId, {
       processed: counters.processed,
@@ -123,7 +135,8 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
     const done = remaining.length === 0;
     if (done) {
       const reconciled = await reconcileProcessedCount(db, scanId, { ...scan, processed: counters.processed });
-      if (reconciled !== undefined) counters.processed = reconciled;
+      if (reconciled.processed !== undefined) counters.processed = reconciled.processed;
+      counters.failed = reconciled.error;
       await finishScan(db, userId, scanId);
     }
 
@@ -136,17 +149,42 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
 /**
  * Corrects scans.processed/total against the authoritative scan_items counts before a scan
  * is marked done, in case an earlier step was interrupted after marking its batch's items
- * done but before saving its counter update. Returns the corrected `processed`, or undefined
- * if nothing needed fixing.
+ * done but before saving its counter update. Also returns the current error count, used for
+ * the "N items failed" retry affordance (Phase 11).
  */
-async function reconcileProcessedCount(db: Db, scanId: string, scan: Pick<Scan, "processed" | "total">): Promise<number | undefined> {
-  const { total, pending } = await repo.countScanItemStatuses(db, scanId);
+async function reconcileProcessedCount(
+  db: Db,
+  scanId: string,
+  scan: Pick<Scan, "processed" | "total">,
+): Promise<{ processed: number | undefined; error: number }> {
+  const { total, pending, error } = await repo.countScanItemStatuses(db, scanId);
+  // "processed" counts both done and error items (both were processed; error ones just failed) — unchanged from before Phase 11.
   const trueProcessed = total - pending;
   const patch: TablesUpdate<"scans"> = {};
   if (trueProcessed !== scan.processed) patch.processed = trueProcessed;
   if (total !== scan.total) patch.total = total; // scan_items is the source of truth; total should already match
   if (Object.keys(patch).length > 0) await repo.updateScan(db, scanId, patch);
-  return patch.processed;
+  return { processed: patch.processed, error };
+}
+
+/**
+ * Phase 11 "retry failed items": resets a scan's errored scan_items to pending and reopens the
+ * scan (if it had already finished) so the client's step loop picks them back up.
+ */
+export async function retryFailedScanItems(db: Db, userId: string, scanId: string): Promise<{ retried: number }> {
+  const scan = await repo.getScan(db, scanId);
+  if (!scan || scan.user_id !== userId) throw new Error("Scan not found");
+  if (scan.status !== "done" && scan.status !== "failed") throw new Error("Only a finished scan's items can be retried");
+
+  const retried = await repo.resetFailedScanItems(db, scanId);
+  if (retried > 0) {
+    // Reopening this scan collides with scans_one_active_per_user (A4) if another scan is
+    // already active; surface that clearly rather than as a raw constraint-violation message.
+    const active = await repo.getActiveScan(db);
+    if (active && active.id !== scanId) throw new Error("Another scan is already running; wait for it to finish before retrying.");
+    await repo.updateScan(db, scanId, { status: "processing", error: null, finished_at: null });
+  }
+  return { retried };
 }
 
 async function finishScan(db: Db, userId: string, scanId: string): Promise<void> {

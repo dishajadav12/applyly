@@ -103,6 +103,27 @@ npx supabase projects list
 
 Your project should be marked as linked.
 
+## 6. Deploy to Vercel
+
+1. Push this repo to GitHub (or GitLab/Bitbucket), then go to https://vercel.com/new and import it. Framework preset: **Next.js** (auto-detected).
+2. Before the first deploy, open **Environment Variables** and add every value from `.env.local` for the **Production** environment:
+
+   | Variable | Value |
+   |---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | same as local |
+   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | same as local |
+   | `SUPABASE_SECRET_KEY` | same as local — server only, never exposed to the browser |
+   | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | same as local |
+   | `TOKEN_ENCRYPTION_KEY` | same as local. **Reuse the local value** — a different key can't decrypt refresh tokens already stored by local testing, and everyone would need to reconnect Gmail |
+   | `NEXT_PUBLIC_SITE_URL` | your Vercel URL, e.g. `https://applyly.vercel.app` (or a custom domain) |
+
+3. Click **Deploy**. Note the assigned `*.vercel.app` URL (or attach a custom domain under **Settings → Domains** first).
+4. Add the production URL to Supabase: **Authentication → URL Configuration → Redirect URLs**, add `https://<your-vercel-url>/auth/callback`. Leave the `localhost:3000` entry in place so local dev keeps working. (**Site URL** can stay `http://localhost:3000`; only the redirect URL allowlist matters for sign-in to succeed.)
+5. If `NEXT_PUBLIC_SITE_URL` changed after the first deploy (e.g. you attached a custom domain), update the env var in Vercel and redeploy — it's baked in at build time.
+6. Visit the production URL, sign in with Google, and run a scan to confirm everything is wired up end to end.
+
+Every subsequent `git push` to the production branch redeploys automatically. Preview deployments (PRs, other branches) get their own URL but share the same env vars unless overridden per-environment; since Google's OAuth client only allow-lists specific redirect URIs, sign-in will only work on origins added to both Supabase's redirect URLs **and**, if you lock it down, Google's own "Authorized redirect URIs" (step 2c) — the Supabase callback URI there does not need to change per deploy, since Google always redirects to Supabase first.
+
 ## Troubleshooting
 
 - **`redirect_uri_mismatch` at sign-in:** the redirect URI in Google must match `https://<project-ref>.supabase.co/auth/v1/callback` exactly, including `https` and no trailing slash.

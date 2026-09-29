@@ -9,15 +9,17 @@ import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RANGE_PRESETS, resolveRange, type RangePreset } from "@/lib/ranges";
 
-type Counters = { processed: number; jobRelated: number; appsCreated: number; appsUpdated: number; total: number };
-type Phase = "idle" | "listing" | "processing" | "done" | "failed" | "cancelled";
+type Counters = { processed: number; jobRelated: number; appsCreated: number; appsUpdated: number; total: number; failed: number };
+type Phase = "idle" | "listing" | "processing" | "done" | "failed" | "cancelled" | "network-error" | "needs-reconnect";
 
-export type ActiveScan = { id: string; status: Phase } & Partial<Counters>;
+export type ActiveScan = { id: string; status: "listing" | "processing" } & Partial<Counters>;
 
 const BUSY_RETRY_MS = 2000;
 /** The scans-row lease is held for up to this long (A4); a step interrupted mid-run
  * (e.g. the page was reloaded) can leave it held until it naturally expires. */
 const LEASE_SECONDS = 90;
+
+const ZERO_COUNTERS: Counters = { processed: 0, jobRelated: 0, appsCreated: 0, appsUpdated: 0, total: 0, failed: 0 };
 
 export function ScanControls({ activeScan }: { activeScan: ActiveScan | null }) {
   const router = useRouter();
@@ -26,17 +28,12 @@ export function ScanControls({ activeScan }: { activeScan: ActiveScan | null }) 
   const [customEnd, setCustomEnd] = useState("");
   const [scanId, setScanId] = useState<string | null>(activeScan?.id ?? null);
   const [phase, setPhase] = useState<Phase>(activeScan?.status ?? "idle");
-  const [counters, setCounters] = useState<Counters>({
-    processed: activeScan?.processed ?? 0,
-    jobRelated: activeScan?.jobRelated ?? 0,
-    appsCreated: activeScan?.appsCreated ?? 0,
-    appsUpdated: activeScan?.appsUpdated ?? 0,
-    total: activeScan?.total ?? 0,
-  });
+  const [counters, setCounters] = useState<Counters>({ ...ZERO_COUNTERS, ...activeScan });
   // Guards against a step response landing after Cancel was clicked, or two loops overlapping.
   const cancelledRef = useRef(false);
   const stepLoopRunning = useRef(false);
   const [waitingOnLease, setWaitingOnLease] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const runStepLoop = useCallback(
     async (id: string) => {
@@ -48,9 +45,18 @@ export function ScanControls({ activeScan }: { activeScan: ActiveScan | null }) 
         for (;;) {
           if (cancelledRef.current) return;
 
-          const res = await fetch(`/api/scans/${id}/step`, { method: "POST" });
+          let res: Response;
+          try {
+            res = await fetch(`/api/scans/${id}/step`, { method: "POST" });
+          } catch {
+            // Phase 11: offline / DNS / connection-reset — distinct from a server-side failure,
+            // since the scan is still "processing" server-side and just needs the loop restarted.
+            setPhase("network-error");
+            return;
+          }
+          const body = await res.json().catch(() => ({}));
 
-          if (res.status === 409) {
+          if (res.status === 409 && body.busy) {
             // Another step already holds the lease — normal under concurrency, or (after a
             // reload interrupted a step mid-run) waiting for it to expire, up to LEASE_SECONDS.
             setWaitingOnLease(true);
@@ -59,14 +65,20 @@ export function ScanControls({ activeScan }: { activeScan: ActiveScan | null }) 
           }
           setWaitingOnLease(false);
 
-          const body = await res.json();
           if (!res.ok) {
-            setPhase("failed");
+            setPhase(body.needsReconnect ? "needs-reconnect" : "failed");
             toast.error(body.error ?? "Scan failed");
             return;
           }
 
-          setCounters({ processed: body.processed, jobRelated: body.jobRelated, appsCreated: body.appsCreated, appsUpdated: body.appsUpdated, total: body.total });
+          setCounters({
+            processed: body.processed,
+            jobRelated: body.jobRelated,
+            appsCreated: body.appsCreated,
+            appsUpdated: body.appsUpdated,
+            total: body.total,
+            failed: body.failed ?? 0,
+          });
           // A9: refresh the (server-fetched) applications table after every step, not just at
           // the end, so rows appear live while a scan runs.
           router.refresh();
@@ -94,7 +106,7 @@ export function ScanControls({ activeScan }: { activeScan: ActiveScan | null }) 
 
   async function startScan() {
     setPhase("listing");
-    setCounters({ processed: 0, jobRelated: 0, appsCreated: 0, appsUpdated: 0, total: 0 });
+    setCounters(ZERO_COUNTERS);
     try {
       const { start, end } = resolveRange(preset, new Date(), { start: customStart, end: customEnd });
       const res = await fetch("/api/scans", {
@@ -111,6 +123,7 @@ export function ScanControls({ activeScan }: { activeScan: ActiveScan | null }) 
         void runStepLoop(body.scanId);
         return;
       }
+      if (res.status === 429) throw new Error(body.error ?? "Please wait before starting another scan");
       if (!res.ok) throw new Error(body.error ?? "Could not start the scan");
 
       setScanId(body.scanId);
@@ -118,7 +131,7 @@ export function ScanControls({ activeScan }: { activeScan: ActiveScan | null }) 
       setPhase("processing");
       void runStepLoop(body.scanId);
     } catch (err) {
-      setPhase("idle");
+      setPhase(err instanceof Error && /reconnect/i.test(err.message) ? "needs-reconnect" : "idle");
       toast.error(err instanceof Error ? err.message : "Could not start the scan");
     }
   }
@@ -133,6 +146,27 @@ export function ScanControls({ activeScan }: { activeScan: ActiveScan | null }) 
       toast.info("Scan cancelled");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not cancel the scan");
+    }
+  }
+
+  async function retryFailedItems() {
+    if (!scanId) return;
+    setRetrying(true);
+    try {
+      const res = await fetch(`/api/scans/${scanId}/retry-failed`, { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? "Could not retry failed items");
+      if (body.retried === 0) {
+        toast.info("Nothing to retry");
+        return;
+      }
+      toast.info(`Retrying ${body.retried} item(s)`);
+      setPhase("processing");
+      void runStepLoop(scanId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not retry failed items");
+    } finally {
+      setRetrying(false);
     }
   }
 
@@ -187,6 +221,33 @@ export function ScanControls({ activeScan }: { activeScan: ActiveScan | null }) 
             <ProgressValue />
           </div>
         </Progress>
+      )}
+
+      {phase === "done" && counters.failed > 0 && (
+        <p className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+          {counters.failed} item{counters.failed === 1 ? "" : "s"} failed to process.
+          <Button size="xs" variant="outline" disabled={retrying} onClick={retryFailedItems}>
+            {retrying ? "Retrying…" : "Retry failed items"}
+          </Button>
+        </p>
+      )}
+
+      {phase === "network-error" && (
+        <p className="flex items-center gap-2 text-sm text-destructive">
+          Lost connection to the server.
+          <Button size="xs" variant="outline" onClick={() => scanId && runStepLoop(scanId)}>
+            Retry
+          </Button>
+        </p>
+      )}
+
+      {phase === "needs-reconnect" && (
+        <p className="text-sm text-destructive">
+          Gmail access needs to be reconnected.{" "}
+          <a href="/auth/sign-in?consent=1" className="underline">
+            Reconnect Gmail
+          </a>
+        </p>
       )}
 
       {phase === "failed" && <p className="text-sm text-destructive">The scan failed. You can start a new one above.</p>}

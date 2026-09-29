@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { StatusBadge } from "@/components/status-badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +22,20 @@ export function AppTable({ applications, onSelect }: { applications: Application
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("applied");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // Phase 11: "/" focuses search, unless the user is already typing somewhere.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "/") return;
+      const target = e.target as HTMLElement | null;
+      if (target && /^(input|textarea|select)$/i.test(target.tagName)) return;
+      e.preventDefault();
+      searchRef.current?.focus();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const statusCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -70,7 +84,13 @@ export function AppTable({ applications, onSelect }: { applications: Application
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Input placeholder="Search company or role…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+        <Input
+          ref={searchRef}
+          placeholder="Search company or role… (/)"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
         <div className="flex flex-wrap gap-1.5">
           <FilterChip label="All" count={applications.length} active={statusFilter === null} onClick={() => setStatusFilter(null)} />
           {visibleStatuses.map((s) => (
