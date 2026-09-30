@@ -5,6 +5,7 @@ import { applyAiFallback, getAiProvider, isAiEligible } from "@/lib/ai";
 import type { Db, Scan } from "@/lib/db/repo";
 import * as repo from "@/lib/db/repo";
 import type { TablesInsert, TablesUpdate } from "@/lib/db/types.gen";
+import { normalizeCompanyKey } from "@/lib/extract/company";
 import { extractFromMessage, type ExtractionResult } from "@/lib/extract";
 import { normalizeMessage } from "@/lib/extract/normalize";
 import { createGmailClient, getMessage, pool } from "@/lib/gmail/client";
@@ -198,6 +199,7 @@ export async function retryFailedScanItems(db: Db, userId: string, scanId: strin
 }
 
 async function finishScan(db: Db, userId: string, scanId: string): Promise<void> {
+  await rematchReviewEvents(db);
   await repo.updateScan(db, scanId, { status: "done", finished_at: new Date().toISOString() });
   await repo.setLastScanAt(db, userId, new Date());
 }
@@ -251,34 +253,15 @@ async function processJobRelatedEvent(
     return false;
   }
 
-  const [threadEvents, companyApps] = await Promise.all([
-    repo.getEventsByThread(db, parsed.threadId),
-    extraction.companyKey ? repo.getApplicationsByCompanyKey(db, extraction.companyKey) : Promise.resolve([]),
-  ]);
-
-  const matchInput: MatchInputEvent = {
+  const { matchInput, context, applications } = await loadMatchContext(db, {
     messageId: parsed.messageId,
     threadId: parsed.threadId,
     eventType: extraction.eventType!,
     companyKey: extraction.companyKey,
     role: extraction.role,
     reqId: extraction.reqId,
-    userLocked: false,
-  };
-  const existingEvents: MatchExistingEvent[] = threadEvents.map((e) => ({
-    messageId: e.message_id,
-    threadId: e.thread_id,
-    state: e.state as MatchExistingEvent["state"],
-    applicationId: e.application_id ?? undefined,
-  }));
-  const applications: MatchApplicationSummary[] = companyApps.map((a) => ({
-    id: a.id,
-    companyKey: a.company_key,
-    role: a.role,
-    status: a.status as Status,
-    reqIds: a.req_ids,
-  }));
-  const context: MatchContext = { existingEvents, applications };
+    text: [parsed.subject, parsed.snippet].filter(Boolean).join(" "),
+  });
 
   const result = matchEvent(matchInput, context);
 
@@ -310,6 +293,7 @@ async function processJobRelatedEvent(
 
   await repo.upsertEvent(db, {
     ...baseRow,
+    reasons: [...extraction.reasons, result.reason],
     application_id: applicationId,
     state,
     user_locked: false,
@@ -318,6 +302,70 @@ async function processJobRelatedEvent(
 
   if (applicationId) touched.add(applicationId);
   return created;
+}
+
+type MatchEventFields = Omit<MatchInputEvent, "userLocked">;
+
+/** Loads the thread events and same-company applications the matcher needs for one event. */
+async function loadMatchContext(db: Db, fields: MatchEventFields) {
+  const [threadEvents, companyApps] = await Promise.all([
+    repo.getEventsByThread(db, fields.threadId),
+    fields.companyKey ? repo.getApplicationsByCompanyKey(db, fields.companyKey) : Promise.resolve([]),
+  ]);
+  const matchInput: MatchInputEvent = { ...fields, userLocked: false };
+  const existingEvents: MatchExistingEvent[] = threadEvents.map((e) => ({
+    messageId: e.message_id,
+    threadId: e.thread_id,
+    state: e.state as MatchExistingEvent["state"],
+    applicationId: e.application_id ?? undefined,
+  }));
+  const applications: MatchApplicationSummary[] = companyApps.map((a) => ({
+    id: a.id,
+    companyKey: a.company_key,
+    role: a.role,
+    status: a.status as Status,
+    reqIds: a.req_ids,
+  }));
+  const context: MatchContext = { existingEvents, applications };
+  return { matchInput, context, applications };
+}
+
+/**
+ * Re-runs the matcher over the review queue. Events land in review only because the application
+ * they belong to didn't exist yet (or was still ambiguous) when they were processed, so this runs
+ * after every scan and on demand. Only auto-attaches; it never creates applications, and never
+ * touches user_locked events (D15). Returns how many events left the queue.
+ */
+export async function rematchReviewEvents(db: Db): Promise<number> {
+  const events = (await repo.listReviewEvents(db)).filter((e) => !e.user_locked);
+  const touched = new Set<string>();
+  let resolved = 0;
+
+  // Oldest first, so an earlier email's attachment can anchor a later one in the same thread.
+  for (const e of events.reverse()) {
+    const { matchInput, context } = await loadMatchContext(db, {
+      messageId: e.message_id,
+      threadId: e.thread_id,
+      eventType: e.event_type as EventType,
+      companyKey: e.company ? normalizeCompanyKey(e.company) : undefined,
+      role: e.role ?? undefined,
+      reqId: e.req_id ?? undefined,
+      text: [e.subject, e.snippet].filter(Boolean).join(" "),
+    });
+    const result = matchEvent(matchInput, context);
+    if (result.action !== "attach" || !result.applicationId) continue;
+    await repo.updateEvent(db, e.message_id, {
+      application_id: result.applicationId,
+      state: "linked",
+      match_confidence: result.matchConfidence ?? null,
+      reasons: [...e.reasons, `re-matched: ${result.reason}`],
+    });
+    touched.add(result.applicationId);
+    resolved++;
+  }
+
+  for (const id of touched) await rederiveApplication(db, id);
+  return resolved;
 }
 
 export function normalizeRoleKey(role: string): string {
@@ -362,6 +410,12 @@ export async function rederiveApplication(db: Db, applicationId: string): Promis
   }
   if ("status" in derived) patch.status = derived.status;
   if ("primaryRecruiterEmail" in derived) patch.primary_recruiter_email = derived.primaryRecruiterEmail ?? null;
+
+  // The "needs review" dot is only meaningful while an unresolved email for this company remains.
+  if (app.needs_review) {
+    const pending = await repo.listReviewEvents(db);
+    if (!pending.some((e) => e.company && normalizeCompanyKey(e.company) === app.company_key)) patch.needs_review = false;
+  }
 
   await repo.updateApplication(db, applicationId, patch);
 }

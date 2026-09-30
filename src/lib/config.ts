@@ -1,7 +1,7 @@
 // All tunable lists and thresholds live here (see PROJECT_SPEC.md A6/A7).
 // Bump PARSER_VERSION whenever extraction behavior changes.
 
-export const PARSER_VERSION = 1;
+export const PARSER_VERSION = 2;
 
 /** Job-related if classification score >= this. */
 export const CLASSIFY_SCORE_THRESHOLD = 3;
@@ -216,6 +216,12 @@ export const COMPANY_SUFFIXES = [
   "talent",
   "hiring team",
 ] as const;
+
+/** Substrings of ATS display names that name the vendor, not the employer; never used as a company fallback. */
+export const GENERIC_SENDER_NAMES: readonly string[] = ["greenhouse", "lever", "workday", "ashby", "no-reply", "noreply", "do not reply", "jobvite", "icims", "smartrecruiters", "notification", "workable", "rippling"];
+
+/** Job boards and aggregators: their sender domain is never the employer. */
+export const NON_EMPLOYER_SENDER_DOMAINS: readonly string[] = ["linkedin.com", "indeed.com", "glassdoor.com", "ziprecruiter.com", "joinhandshake.com", "wellfound.com", "simplify.jobs", "substack.com"];
 
 /** Sender domain (or domain fragment) → canonical company name. */
 export const COMPANY_ALIASES: Record<string, string> = {

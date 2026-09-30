@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractCompany, normalizeCompanyKey } from "@/lib/extract/company";
+import { extractCompany, extractCompanyFromSender, normalizeCompanyKey } from "@/lib/extract/company";
 import { normalizeMessage } from "@/lib/extract/normalize";
 import { stripTrailingCompanySuffix } from "@/lib/extract/text-utils";
 import type { ParsedMessage } from "@/lib/gmail/mime";
@@ -78,5 +78,20 @@ describe("extractCompany: never guesses", () => {
     const result = extractCompany(msg({ from: "hr@unknownco.example", text: "hello there, thanks" }));
     expect(result.company).toBeUndefined();
     expect(result.reasons.at(-1)).toMatch(/never guessed/);
+  });
+});
+
+describe("extractCompanyFromSender", () => {
+  it("uses the ATS display name, stripping recruiting suffixes", () => {
+    const r = extractCompanyFromSender(msg({ from: "no-reply@us.greenhouse-mail.io", fromName: "Acme Recruiting" }));
+    expect(r?.company).toBe("Acme");
+  });
+
+  it("uses a corporate sender domain, and never freemail, assessment, job-board or generic ATS names", () => {
+    expect(extractCompanyFromSender(msg({ from: "jane@mail.acme.com" }))?.company).toBe("Acme");
+    expect(extractCompanyFromSender(msg({ from: "jane@gmail.com" }))).toBeUndefined();
+    expect(extractCompanyFromSender(msg({ from: "x@hackerrank.com" }))).toBeUndefined();
+    expect(extractCompanyFromSender(msg({ from: "jobs@linkedin.com" }))).toBeUndefined();
+    expect(extractCompanyFromSender(msg({ from: "no-reply@greenhouse.io", fromName: "Greenhouse" }))).toBeUndefined();
   });
 });

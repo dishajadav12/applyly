@@ -1,4 +1,4 @@
-import { COMPANY_ALIASES, FREEMAIL_DOMAINS } from "@/lib/config";
+import { ASSESSMENT_DOMAINS, ATS_DOMAINS, COMPANY_ALIASES, FREEMAIL_DOMAINS, GENERIC_SENDER_NAMES, NON_EMPLOYER_SENDER_DOMAINS } from "@/lib/config";
 import { registrableDomain } from "@/lib/gmail/domains";
 import { extractAshbyCompany } from "./ats/ashby";
 import { extractAssessmentCompany } from "./ats/assessment";
@@ -6,7 +6,7 @@ import { extractGreenhouseCompany } from "./ats/greenhouse";
 import { extractLeverCompany } from "./ats/lever";
 import { extractWorkdayCompany } from "./ats/workday";
 import type { NormalizedMessage } from "./normalize";
-import { NAME_RUN, normalizeCompanyKey, sentenceCasePhrase, stripTrailingCompanySuffix } from "./text-utils";
+import { NAME_RUN, normalizeCompanyKey, sentenceCasePhrase, stripTrailingCompanySuffix, titleCase } from "./text-utils";
 
 export type CompanyExtraction = { company?: string; companyKey?: string; atsSource?: string; reasons: string[] };
 
@@ -78,6 +78,29 @@ export function extractCompany(msg: NormalizedMessage): CompanyExtraction {
 
   reasons.push("no company pattern matched; company left undefined (never guessed)");
   return { atsSource, reasons };
+}
+
+/**
+ * Last-resort company from the sender itself, used only for emails already classified job-related
+ * (so newsletters and digests never get a company). ATS mail is sent on an employer's behalf with the
+ * employer as display name ("Roblox <no-reply@us.greenhouse-mail.io>"); any other corporate domain is
+ * taken as the employer. Every use is recorded in reasons[] as a fallback.
+ */
+export function extractCompanyFromSender(msg: NormalizedMessage): CompanyExtraction | undefined {
+  const domain = registrableDomain(msg.from);
+  if (!domain || (FREEMAIL_DOMAINS as readonly string[]).includes(domain)) return undefined;
+
+  if ((ATS_DOMAINS as readonly string[]).includes(domain)) {
+    const name = msg.fromName ? stripTrailingCompanySuffix(msg.fromName.replace(/["']/g, "")) : "";
+    if (!name || GENERIC_SENDER_NAMES.some((g) => name.toLowerCase().includes(g))) return undefined;
+    return finalize(name, undefined, [`company "${name}" from ATS sender display name (fallback)`]);
+  }
+
+  const excluded = [...ASSESSMENT_DOMAINS, ...NON_EMPLOYER_SENDER_DOMAINS] as readonly string[];
+  const label = domain.split(".")[0]!;
+  if (excluded.includes(domain) || label.length < 2) return undefined;
+  const name = titleCase(label);
+  return finalize(name, undefined, [`company "${name}" from sender domain "${domain}" (fallback)`]);
 }
 
 export { normalizeCompanyKey };

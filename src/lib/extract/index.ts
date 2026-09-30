@@ -1,7 +1,7 @@
 import { PARSER_VERSION, type EventType } from "@/lib/config";
 import type { ParsedMessage } from "@/lib/gmail/mime";
 import { classify, type ClassifyContext } from "./classify";
-import { extractCompany } from "./company";
+import { extractCompany, extractCompanyFromSender } from "./company";
 import { normalizeMessage } from "./normalize";
 import { extractRecruiter } from "./recruiter";
 import { extractReqId } from "./reqId";
@@ -37,7 +37,11 @@ export function extractFromMessage(parsed: ParsedMessage, context: ClassifyConte
   const msg = normalizeMessage(parsed);
 
   const cls = classify(msg, context);
-  const companyResult = extractCompany(msg);
+  let companyResult = extractCompany(msg);
+  if (cls.isJobRelated && !companyResult.company) {
+    const fallback = extractCompanyFromSender(msg);
+    if (fallback) companyResult = { ...fallback, atsSource: companyResult.atsSource, reasons: [...companyResult.reasons, ...fallback.reasons] };
+  }
   const roleResult = extractRole(msg);
   const recruiterResult = extractRecruiter(msg);
   const reqIdResult = extractReqId(msg);

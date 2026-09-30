@@ -182,3 +182,33 @@ describe("matchEvent: sender domain is never used as a signal", () => {
     expect(result).toMatchObject({ action: "attach", applicationId: "app-1", rule: "M3" });
   });
 });
+
+describe("matchEvent: M3c (role named in subject/snippet)", () => {
+  const apps = [
+    app({ id: "app-1", role: "Software Engineer Intern" }),
+    app({ id: "app-2", role: "Data Scientist" }),
+  ];
+
+  it("attaches a roleless event to the one application whose role the text names, confidence 0.65", () => {
+    const result = matchEvent(
+      event({ eventType: "rejection", text: "Update on your Data Scientist application at Acme" }),
+      ctx({ applications: apps }),
+    );
+    expect(result).toMatchObject({ action: "attach", applicationId: "app-2", matchConfidence: 0.65, rule: "M3c" });
+  });
+
+  it("prefers the most specific role when one role's tokens contain another's", () => {
+    const result = matchEvent(
+      event({ eventType: "rejection", text: "Your Software Engineer Intern application" }),
+      ctx({ applications: [app({ id: "app-1", role: "Software Engineer Intern" }), app({ id: "app-3", role: "Software Engineer" })] }),
+    );
+    expect(result).toMatchObject({ applicationId: "app-1", rule: "M3c" });
+  });
+
+  it("still reviews when the text names no role, or two equally specific roles", () => {
+    expect(matchEvent(event({ eventType: "rejection", text: "Thanks for applying" }), ctx({ applications: apps })).action).toBe("review");
+    expect(
+      matchEvent(event({ eventType: "rejection", text: "Data Scientist or Backend Engineer" }), ctx({ applications: [...apps, app({ id: "app-4", role: "Backend Engineer" })] })).action,
+    ).toBe("review");
+  });
+});

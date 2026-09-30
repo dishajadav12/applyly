@@ -1,4 +1,5 @@
 import { ROLE_SIMILARITY_THRESHOLD, TERMINAL_STATUSES, type EventType, type Status } from "@/lib/config";
+import { normalizeRoleTokens } from "./normalize";
 import { roleSimilarity } from "./similarity";
 
 export type MatchAction = "attach" | "create" | "review";
@@ -11,6 +12,8 @@ export type MatchInputEvent = {
   companyKey?: string;
   role?: string;
   reqId?: string;
+  /** Subject + Gmail snippet; lets a roleless event be tied to the one application whose role it names (M3c). */
+  text?: string;
   /** D15: matchEvent must never be called for a user_locked event; see the guard below. */
   userLocked: boolean;
 };
@@ -139,6 +142,28 @@ export function matchEvent(event: MatchInputEvent, context: MatchContext): Match
   }
 
   // From here, the event has no role.
+
+  // M3c: the subject/snippet names exactly one (the most specific) of the company's application roles,
+  // even though the role extractor couldn't pull a role out of the email.
+  if (event.text) {
+    const textTokens = normalizeRoleTokens(event.text);
+    const named = companyApps
+      .filter((a) => a.role !== "Unknown")
+      .map((app) => ({ app, tokens: normalizeRoleTokens(app.role) }))
+      .filter(({ tokens }) => tokens.size > 0 && [...tokens].every((t) => textTokens.has(t)));
+    const top = Math.max(0, ...named.map((n) => n.tokens.size));
+    const best = named.filter((n) => n.tokens.size === top);
+    if (best.length === 1) {
+      return {
+        action: "attach",
+        applicationId: best[0].app.id,
+        matchConfidence: 0.65,
+        rule: "M3c",
+        reason: `M3c: email text names the role "${best[0].app.role}" of application ${best[0].app.id}`,
+      };
+    }
+  }
+
   const nonTerminal = companyApps.filter((a) => !isTerminalStatus(a.status));
 
   // M4: exactly one non-terminal application at this company.

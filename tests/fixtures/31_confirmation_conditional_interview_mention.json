@@ -10,7 +10,7 @@
   "expected": {
     "isJobRelated": true,
     "eventType": "application_confirmation",
-    "company": null,
+    "company": "Contoso",
     "role": null,
     "atsSource": null,
     "recruiterEmail": "talent@contoso.example",

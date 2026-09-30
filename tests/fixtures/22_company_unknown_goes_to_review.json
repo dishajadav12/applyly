@@ -1,5 +1,5 @@
 {
-  "description": "No ATS parser, no regex pattern, no alias match, no recruiter signal: company stays undefined for review",
+  "description": "No ATS parser, no regex pattern, no alias match, no recruiter signal: company falls back to the sender domain",
   "input": {
     "from": "hr@obscurecorp.example",
     "fromName": "Obscure Corp HR",
@@ -9,7 +9,7 @@
   "expected": {
     "isJobRelated": true,
     "eventType": "application_confirmation",
-    "company": null,
+    "company": "Obscurecorp",
     "atsSource": null,
     "recruiterEmail": null
   }
