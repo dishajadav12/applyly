@@ -114,3 +114,26 @@ describe("classify: threshold and event type", () => {
     expect(r.reasons.length).toBeGreaterThan(0);
   });
 });
+
+describe("classify: ATS confirmation without a stock phrase", () => {
+  const base = { messageId: "m", threadId: "t", receivedAt: "2026-05-04T00:00:00Z", snippet: "", headers: {}, labelIds: ["INBOX"] };
+
+  it("reads an Ashby 'We Got It!' email as a confirmation, not recruiter outreach from the 'other open roles' footer", () => {
+    const r = classify(
+      normalizeMessage({
+        ...base,
+        from: "no-reply@ashbyhq.com",
+        subject: "Acme | We Got It! Thank You for Considering a Career With Us !",
+        text: "Hi Sam,\n\nWe appreciate the effort you put into applying with us.\n\nVisit Life at Acme for our culture, teams, and other open roles.",
+      }),
+    );
+    expect(r.eventType).toBe("application_confirmation");
+  });
+
+  it("never reports recruiter_outreach for an ATS sender", () => {
+    const r = classify(
+      normalizeMessage({ ...base, from: "no-reply@ashbyhq.com", subject: "Update on your application", text: "Take a look at our open role listings." }),
+    );
+    expect(r.eventType).not.toBe("recruiter_outreach");
+  });
+});

@@ -95,3 +95,21 @@ describe("extractCompanyFromSender", () => {
     expect(extractCompanyFromSender(msg({ from: "no-reply@greenhouse.io", fromName: "Greenhouse" }))).toBeUndefined();
   });
 });
+
+describe("extractCompany: assessment-platform subjects", () => {
+  it('reads the company from "Assessment completed: Roblox Assessment"', () => {
+    const r = extractCompany(msg({ from: "no-reply@codesignal.com", subject: "Assessment completed: Roblox Assessment", text: "You have completed the assessment." }));
+    expect(r.company).toBe("Roblox");
+  });
+
+  it("does not treat generic words as a company", () => {
+    const r = extractCompany(msg({ from: "no-reply@codesignal.com", subject: "Your Assessment is ready", text: "Good luck." }));
+    expect(r.company).toBeUndefined();
+  });
+});
+
+describe("extractCompanyFromSender: team suffixes", () => {
+  it('strips "Talent Team" from an ATS display name', () => {
+    expect(extractCompanyFromSender(msg({ from: "no-reply@ashbyhq.com", fromName: "Acme Digital Talent Team" }))?.company).toBe("Acme Digital");
+  });
+});

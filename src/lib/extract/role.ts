@@ -46,7 +46,8 @@ export function extractRole(msg: NormalizedMessage): RoleExtraction {
   ] as const) {
     for (const { name, re } of ROLE_PATTERNS) {
       const m = haystack.match(re);
-      const captured = m?.[1]?.trim();
+      // "Software Engineer (Job number: 200058252)" -> "Software Engineer"
+      const captured = m?.[1]?.replace(/\s*[([](?:job|req|requisition)\b[^)\]]*[)\]]\s*$/i, "").trim();
       if (!captured) continue;
       if (isValidCapture(captured)) {
         reasons.push(`role from pattern ${name} in ${haystackName}`);

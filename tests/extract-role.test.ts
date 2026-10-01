@@ -90,3 +90,10 @@ describe("extractRole: never guesses", () => {
     expect(result.reasons.at(-1)).toMatch(/never guessed/);
   });
 });
+
+describe("extractRole: trailing job-number parenthetical", () => {
+  it("drops '(Job number: N)' from the captured role", () => {
+    const m = normalizeMessage({ messageId: "m", threadId: "t", receivedAt: "2026-05-15T12:00:00.000Z", from: "a@acme.example", subject: "Thank you", snippet: "", text: "submit your application for Software Engineer (Job number: 200058252). We're glad.", headers: {}, labelIds: [] });
+    expect(extractRole(m).role).toBe("Software Engineer");
+  });
+});

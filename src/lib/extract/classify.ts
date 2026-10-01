@@ -59,6 +59,20 @@ const PHRASE_SETS: Partial<Record<EventType, readonly string[]>> = {
     "thanks for applying",
     "application received",
     "received your application",
+    "we got it",
+    "thank you for considering",
+    "thanks for considering",
+    "effort you put into applying",
+    "for applying with us",
+    "interest in a career at",
+    "considering a career",
+    "application submitted",
+    "submitted your application",
+    "application has been submitted",
+    "we received your application",
+    "thank you for your application",
+    "application was submitted",
+    "your application was sent",
     "your application has been received",
     "your application to",
     "your application for",
@@ -84,6 +98,11 @@ const CONDITIONAL_MARKERS = ["if ", "if you", "if your", "should you", "should y
 
 function includesPhrase(haystack: string, phrase: string): boolean {
   return haystack.toLowerCase().includes(phrase.toLowerCase());
+}
+
+function isPlatformSender(msg: NormalizedMessage): boolean {
+  const domain = registrableDomain(msg.from);
+  return domain !== undefined && ATS_AND_ASSESSMENT_DOMAINS.includes(domain);
 }
 
 function isHumanSender(msg: NormalizedMessage): boolean {
@@ -142,6 +161,9 @@ function detectEventType(msg: NormalizedMessage, reasons: string[]): EventType {
       }
       continue;
     }
+
+    // ATS/assessment platforms send on an employer's behalf; their footers ("other open roles") aren't outreach.
+    if (type === "recruiter_outreach" && isPlatformSender(msg)) continue;
 
     const phrase = findPhrase(sents, PHRASE_SETS[type] ?? []);
     if (phrase) {

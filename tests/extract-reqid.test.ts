@@ -39,3 +39,13 @@ describe("extractReqId", () => {
     expect(result.reasons.at(-1)).toMatch(/no req id pattern/);
   });
 });
+
+describe("extractReqId: false positives", () => {
+  it("does not read ordinary words starting with Req/Job as ids", () => {
+    expect(extractReqId(msg("match your profile to the job requirements and the job description")).reqId).toBeUndefined();
+  });
+
+  it("reads Microsoft-style 'Job number: N'", () => {
+    expect(extractReqId(msg("for Software Engineer (Job number: 200058252).")).reqId).toBe("Job number: 200058252");
+  });
+});

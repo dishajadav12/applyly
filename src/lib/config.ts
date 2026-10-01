@@ -1,7 +1,7 @@
 // All tunable lists and thresholds live here (see PROJECT_SPEC.md A6/A7).
 // Bump PARSER_VERSION whenever extraction behavior changes.
 
-export const PARSER_VERSION = 2;
+export const PARSER_VERSION = 6;
 
 /** Job-related if classification score >= this. */
 export const CLASSIFY_SCORE_THRESHOLD = 3;
@@ -69,6 +69,20 @@ export const Q2_PHRASES = [
   "thanks for applying",
   "application received",
   "received your application",
+  "we got it",
+  "thank you for considering",
+  "thanks for considering",
+  "effort you put into applying",
+  "for applying with us",
+  "interest in a career at",
+  "considering a career",
+  "application submitted",
+  "submitted your application",
+  "application has been submitted",
+  "we received your application",
+  "thank you for your application",
+  "application was submitted",
+  "your application was sent",
   "your application to",
   "your application for",
   "your recent application",
@@ -215,6 +229,10 @@ export const COMPANY_SUFFIXES = [
   "careers",
   "talent",
   "hiring team",
+  "talent team",
+  "recruiting team",
+  "careers team",
+  "talent acquisition team",
 ] as const;
 
 /** Substrings of ATS display names that name the vendor, not the employer; never used as a company fallback. */
@@ -264,8 +282,9 @@ export const NOREPLY_PATTERNS = ["noreply", "no-reply", "donotreply", "do-not-re
 export const REQ_ID_PATTERNS: readonly RegExp[] = [
   /\bR-?\d{4,}\b/,
   /\bJR\d{5,}\b/,
-  /\bReq(?:uisition)? ?(?:ID|#)?:? ?[\w-]+/i,
-  /\bJob ID:? ?[\w-]+/i,
+  // The id must contain a digit, so "requirements" / "job description" are never read as ids.
+  /\bReq(?:uisition)? ?(?:ID|#)?:? ?(?=[\w-]*\d)[\w-]+/i,
+  /\bJob (?:ID|number|no\.?|#):? ?(?=[\w-]*\d)[\w-]+/i,
   /gh_jid=\d+/,
   /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
 ];
