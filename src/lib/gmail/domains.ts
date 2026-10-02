@@ -24,3 +24,17 @@ export function topDomains(domains: (string | undefined)[], limit = 20): { domai
     .sort((a, b) => b.count - a.count || a.domain.localeCompare(b.domain))
     .slice(0, limit);
 }
+
+/**
+ * Employer domains learned from mail already linked to an application, deduplicated and sorted.
+ * Excludes `excluded` (freemail, job boards, ATS/assessment platforms): those either aren't an
+ * employer or are already covered by their own query, and searching them would flood the scan.
+ */
+export function learnedEmployerDomains(fromEmails: string[], excluded: readonly string[]): string[] {
+  const out = new Set<string>();
+  for (const email of fromEmails) {
+    const d = registrableDomain(email);
+    if (d && !excluded.includes(d)) out.add(d);
+  }
+  return [...out].sort();
+}

@@ -1,7 +1,7 @@
 // All tunable lists and thresholds live here (see PROJECT_SPEC.md A6/A7).
 // Bump PARSER_VERSION whenever extraction behavior changes.
 
-export const PARSER_VERSION = 6;
+export const PARSER_VERSION = 8;
 
 /** Job-related if classification score >= this. */
 export const CLASSIFY_SCORE_THRESHOLD = 3;
@@ -87,6 +87,9 @@ export const Q2_PHRASES = [
   "your application for",
   "your recent application",
   "thank you for your interest in",
+  "thanks for your interest in",
+  "received your resume",
+  "thanks for thinking of us",
   "online assessment",
   "coding assessment",
   "technical assessment",
@@ -130,6 +133,29 @@ export const Q3_SENDERS = [
 ] as const;
 
 export const Q3_SUBJECT_TERMS = ["application", "applied"] as const;
+
+/**
+ * Q4: sender-name/address terms typical of recruiting mail. Catches confirmations whose wording
+ * Q2's phrase list misses (Gmail's from: matches both display name and address).
+ */
+export const Q4_SENDER_TERMS = [
+  "recruiting",
+  "recruiter",
+  "recruitment",
+  "talent",
+  "careers",
+  "hiring",
+  "applicant",
+  "candidate",
+  "campus",
+  "jobs",
+] as const;
+
+/** Q4 noise: the same senders Q2 excludes, plus job boards/aggregators. */
+export const Q4_EXCLUDED_SENDERS = [...Q2_EXCLUDED_SENDERS, "linkedin.com", "glassdoor.com", "ziprecruiter.com", "simplify.jobs"] as const;
+
+/** Q5: learned employer domains per scan, split so no single Gmail query gets too long. */
+export const Q5_DOMAINS_PER_QUERY = 40;
 
 /** Appended to every query. */
 export const QUERY_EXCLUSIONS = "-in:chats -in:spam -in:trash";

@@ -5,6 +5,7 @@ export type RoleExtraction = { role?: string; reasons: string[] };
 
 // A7: search the subject first, then the body, for these patterns.
 const ROLE_PATTERNS = [
+  { name: '"following role: X"', re: /\bfollowing (?:role|position)\s*:\s*(.+?)(?:\s+\d{6,})?\s*(?:\.\s|\.$|\n|$)/i },
   { name: '"for the X position/role"', re: /\bfor the\s+(.+?)\s+(?:position|role)\b/i },
   { name: '"application for X"', re: /\bapplication for\s+(.+?)(?=\s+(?:position|role|has|have|was|is|will|been)\b|[.,;\n]|$)/i },
   { name: '"applied to X at"', re: /\bapplied to\s+(.+?)\s+at\b/i },
@@ -12,7 +13,7 @@ const ROLE_PATTERNS = [
 ];
 
 /** Filler-only captures ("the", "this position") are never a real role. */
-const FILLER_ONLY = /^(?:the|a|an|this|that|our|your|it|this position|the position|that role|this role)$/i;
+const FILLER_ONLY = /^(?:the|a|an|this|that|our|your|it|this position|the position|that role|this role|following)$/i;
 
 /** A capture is valid if it isn't empty, isn't too long, has no sentence punctuation, and isn't just filler (A7). */
 function isValidCapture(s: string): boolean {

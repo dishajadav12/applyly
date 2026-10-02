@@ -225,6 +225,13 @@ export async function getProcessedIds(db: Db, messageIds: string[], parserVersio
   return done;
 }
 
+/** Sender addresses of events linked to an application (RLS-scoped to the session user); source of Q5's learned domains. */
+export async function getLinkedSenderEmails(db: Db): Promise<string[]> {
+  const { data, error } = await db.from("email_events").select("from_email").eq("state", "linked").not("application_id", "is", null);
+  if (error) fail("getLinkedSenderEmails", error);
+  return data.map((r) => r.from_email);
+}
+
 export async function markProcessed(db: Db, rows: TablesInsert<"processed_messages">[]): Promise<void> {
   if (rows.length === 0) return;
   const { error } = await db.from("processed_messages").upsert(rows, { onConflict: "user_id,message_id" });

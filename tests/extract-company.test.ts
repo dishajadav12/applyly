@@ -81,6 +81,13 @@ describe("extractCompany: never guesses", () => {
   });
 });
 
+describe("extractCompany: Greenhouse 'application for ROLE at X'", () => {
+  it("reads the company from the subject when the sender name is generic", () => {
+    const r = extractCompany(msg({ from: "no-reply@us.greenhouse-mail.io", fromName: "no-reply", subject: "Your application for University Grad Software Engineer 2027 (USA) at Pinterest", text: "Application received" }));
+    expect(r.company).toBe("Pinterest");
+  });
+});
+
 describe("extractCompanyFromSender", () => {
   it("uses the ATS display name, stripping recruiting suffixes", () => {
     const r = extractCompanyFromSender(msg({ from: "no-reply@us.greenhouse-mail.io", fromName: "Acme Recruiting" }));

@@ -20,7 +20,7 @@ const bodySchema = z.object({
 });
 
 const FETCH_CONCURRENCY = 8;
-const QUERY_NAMES: QueryName[] = ["q1", "q2", "q3"];
+const QUERY_NAMES: QueryName[] = ["q1", "q2", "q3", "q4"];
 
 /**
  * Dev-only classify preview: fetches a sample of matching messages (format=full),

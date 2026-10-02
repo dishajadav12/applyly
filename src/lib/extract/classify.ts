@@ -77,6 +77,7 @@ const PHRASE_SETS: Partial<Record<EventType, readonly string[]>> = {
     "your application to",
     "your application for",
     "your recent application",
+    "received your resume",
     "thank you for your interest in",
     "thanks for your interest in",
   ],

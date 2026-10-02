@@ -1,11 +1,44 @@
 import { describe, expect, it, vi } from "vitest";
 import { ASSESSMENT_DOMAINS, ATS_DOMAINS, Q2_EXCLUDED_SENDERS, Q2_PHRASES } from "@/lib/config";
-import { registrableDomain, topDomains } from "@/lib/gmail/domains";
-import { buildQueries, listMessageIds } from "@/lib/gmail/query";
+import { learnedEmployerDomains, registrableDomain, topDomains } from "@/lib/gmail/domains";
+import { buildLearnedDomainQueries, buildQueries, listMessageIds } from "@/lib/gmail/query";
 
 const start = new Date("2026-05-01T00:00:00Z");
 const end = new Date("2026-05-08T12:30:45.999Z");
 const suffix = `after:${Math.floor(start.getTime() / 1000)} before:${Math.floor(end.getTime() / 1000)} -in:chats -in:spam -in:trash`;
+
+describe("Q4 / Q5 additions", () => {
+  const q = buildQueries(start, end);
+
+  it("Q4 matches recruiting-style senders and excludes job boards", () => {
+    expect(q.q4).toBe(
+      `from:(recruiting OR recruiter OR recruitment OR talent OR careers OR hiring OR applicant OR candidate OR campus OR jobs) -from:(${[...Q2_EXCLUDED_SENDERS, "linkedin.com", "glassdoor.com", "ziprecruiter.com", "simplify.jobs"].join(" OR ")}) ${suffix}`,
+    );
+  });
+
+  it("keeps Q1-Q3 byte-for-byte (the additions never replace them)", () => {
+    expect(q.q1.startsWith("from:(greenhouse.io OR greenhouse-mail.io")).toBe(true);
+    expect(q.q3).toBe(`from:(jobs-noreply@linkedin.com OR indeed.com OR indeedapply) subject:(application OR applied) ${suffix}`);
+    for (const phrase of Q2_PHRASES) expect(q.q2).toContain(`"${phrase}"`);
+  });
+
+  it("learnedEmployerDomains dedupes and drops excluded domains", () => {
+    const got = learnedEmployerDomains(
+      ["a@email.apple.com", "b@apple.com", "c@gmail.com", "d@us.greenhouse-mail.io", "e@stripe.com"],
+      ["gmail.com", "greenhouse-mail.io"],
+    );
+    expect(got).toEqual(["apple.com", "stripe.com"]);
+  });
+
+  it("buildLearnedDomainQueries chunks domains and appends the suffix; none -> no queries", () => {
+    expect(buildLearnedDomainQueries([], start, end)).toEqual([]);
+    const domains = Array.from({ length: 41 }, (_, i) => `d${i}.com`);
+    const qs = buildLearnedDomainQueries(domains, start, end);
+    expect(qs).toHaveLength(2);
+    expect(qs[0]!.startsWith("from:(d0.com OR d1.com")).toBe(true);
+    expect(qs[1]).toBe(`from:(d40.com) ${suffix}`);
+  });
+});
 
 describe("buildQueries", () => {
   const q = buildQueries(start, end);

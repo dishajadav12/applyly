@@ -15,7 +15,7 @@ const bodySchema = z.object({
 });
 
 const METADATA_CONCURRENCY = 8;
-const QUERY_NAMES: QueryName[] = ["q1", "q2", "q3"];
+const QUERY_NAMES: QueryName[] = ["q1", "q2", "q3", "q4"];
 
 /**
  * Dev-only dry run (A6 tuning): unique message-ID counts per query and combined, plus the top 20
