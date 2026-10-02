@@ -1,9 +1,11 @@
+import { Logo } from "@/components/logo";
+
 /** A9: loading skeletons while the dashboard's server-fetched data resolves. */
 export default function DashboardLoading() {
   return (
     <>
       <header className="flex items-center justify-between border-b px-6 py-3">
-        <span className="font-semibold tracking-tight">Applyly</span>
+        <Logo />
         <div className="h-5 w-40 animate-pulse rounded bg-muted" />
       </header>
       <main className="mx-auto w-full max-w-[1600px] space-y-6 p-8">

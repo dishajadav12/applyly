@@ -1,5 +1,5 @@
 import { ROLE_SIMILARITY_THRESHOLD, TERMINAL_STATUSES, type EventType, type Status } from "@/lib/config";
-import { normalizeRoleTokens } from "./normalize";
+import { companyKeysCompatible, normalizeRoleTokens } from "./normalize";
 import { roleSimilarity } from "./similarity";
 
 export type MatchAction = "attach" | "create" | "review";
@@ -100,7 +100,7 @@ export function matchEvent(event: MatchInputEvent, context: MatchContext): Match
     return { action: "review", rule: "M8", reason: "M8: company unknown" };
   }
 
-  const companyApps = context.applications.filter((a) => a.companyKey === companyKey);
+  const companyApps = context.applications.filter((a) => companyKeysCompatible(a.companyKey, companyKey));
 
   // M7: no application exists yet for this company.
   if (companyApps.length === 0) {

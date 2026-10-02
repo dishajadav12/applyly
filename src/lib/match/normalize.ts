@@ -24,3 +24,17 @@ export function normalizeRoleTokens(role: string): Set<string> {
     .filter((t) => !SINGLE_WORD_IGNORED.has(t));
   return new Set(tokens);
 }
+
+const COMPANY_KEY_AFFIXES = ["hello", "get", "try", "join", "meet", "hq", "app", "labs", "ai", "io", "jobs", "careers", "co", "inc"] as const;
+
+/**
+ * Whether two company_keys name the same employer: equal, or one is the other plus a common
+ * brand affix ("pebl" / "hellopebl", "acme" / "acmehq"). The shorter key must be 4+ characters so
+ * short keys never collapse unrelated companies.
+ */
+export function companyKeysCompatible(a: string, b: string): boolean {
+  if (a === b) return true;
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  if (short.length < 4) return false;
+  return COMPANY_KEY_AFFIXES.some((x) => long === x + short || long === short + x);
+}

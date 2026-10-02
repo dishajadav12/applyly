@@ -1,4 +1,4 @@
-import { ASSESSMENT_DOMAINS, ATS_DOMAINS, COMPANY_ALIASES, FREEMAIL_DOMAINS, GENERIC_SENDER_NAMES, NON_EMPLOYER_SENDER_DOMAINS } from "@/lib/config";
+import { ASSESSMENT_DOMAINS, ATS_DOMAINS, COMPANY_ALIASES, FREEMAIL_DOMAINS, GENERIC_SENDER_NAMES, HELPDESK_DOMAINS, NON_EMPLOYER_SENDER_DOMAINS, VENDOR_AS_EMPLOYER_DOMAINS } from "@/lib/config";
 import { registrableDomain } from "@/lib/gmail/domains";
 import { extractAshbyCompany } from "./ats/ashby";
 import { extractAssessmentCompany } from "./ats/assessment";
@@ -6,7 +6,7 @@ import { extractGreenhouseCompany } from "./ats/greenhouse";
 import { extractLeverCompany } from "./ats/lever";
 import { extractWorkdayCompany } from "./ats/workday";
 import type { NormalizedMessage } from "./normalize";
-import { NAME_RUN, normalizeCompanyKey, sentenceCasePhrase, stripTrailingCompanySuffix, titleCase } from "./text-utils";
+import { NAME_RUN, looksLikePersonName, normalizeCompanyKey, sentenceCasePhrase, stripTrailingCompanySuffix, titleCase } from "./text-utils";
 
 export type CompanyExtraction = { company?: string; companyKey?: string; atsSource?: string; reasons: string[] };
 
@@ -80,6 +80,31 @@ export function extractCompany(msg: NormalizedMessage): CompanyExtraction {
   return { atsSource, reasons };
 }
 
+const HELPDESK_LABEL_SUFFIX = /[-_](?:assessment|assessments|support|help|careers|recruiting|talent|hiring|candidates?|jobs|apply|early-?careers?)$/i;
+
+/**
+ * Help-desk mail ("Roblox Early Careers <support@roblox-assessment.zendesk.com>") is sent by the employer
+ * through a vendor, so the employer is named by the display name, then the vendor subdomain, then a
+ * "[Roblox]" subject tag. The vendor itself (Zendesk) is never the company.
+ */
+function extractCompanyFromHelpdesk(msg: NormalizedMessage): CompanyExtraction | undefined {
+  const name = msg.fromName ? stripTrailingCompanySuffix(msg.fromName.replace(/["']/g, "")) : "";
+  if (name && !looksLikePersonName(name, msg.from) && !GENERIC_SENDER_NAMES.some((g) => name.toLowerCase().includes(g)) && !/\b(?:support|help|service)\b/i.test(name)) {
+    return finalize(name, undefined, [`company "${name}" from help-desk sender display name (fallback)`]);
+  }
+
+  const host = (msg.from.split("@").pop() ?? "").toLowerCase();
+  const label = host.split(".")[0]?.replace(HELPDESK_LABEL_SUFFIX, "");
+  if (host.split(".").length > 2 && label && label.length >= 2 && !["support", "help", "mail", "email"].includes(label)) {
+    const cleaned = titleCase(label);
+    return finalize(cleaned, undefined, [`company "${cleaned}" from help-desk vendor subdomain "${host}" (fallback)`]);
+  }
+
+  const tag = msg.subject.match(/^\s*(?:(?:re|fwd?):\s*)*\[([A-Z][\w &'-]{1,30})\]/i)?.[1]?.trim();
+  if (tag) return finalize(tag, undefined, [`company "${tag}" from subject tag (help-desk fallback)`]);
+  return undefined;
+}
+
 /**
  * Last-resort company from the sender itself, used only for emails already classified job-related
  * (so newsletters and digests never get a company). ATS mail is sent on an employer's behalf with the
@@ -91,10 +116,20 @@ export function extractCompanyFromSender(msg: NormalizedMessage): CompanyExtract
   if (!domain || (FREEMAIL_DOMAINS as readonly string[]).includes(domain)) return undefined;
 
   if ((ATS_DOMAINS as readonly string[]).includes(domain)) {
+    // A person writing from the vendor's own domain (Eileen Poeung <eileen@rippling.com>) is that company's
+    // employee: the vendor is the employer, and the person's name is never the company.
+    const isPerson = msg.fromName ? looksLikePersonName(msg.fromName.replace(/["']/g, "").trim(), msg.from) : false;
+    if (isPerson && !VENDOR_AS_EMPLOYER_DOMAINS.includes(domain)) return undefined;
+    if (isPerson) {
+      const label = titleCase(domain.split(".")[0]!);
+      return finalize(label, undefined, [`company "${label}" from sender domain "${domain}": a person (${msg.fromName}) emailing from the platform's own domain is its employee (fallback)`]);
+    }
     const name = msg.fromName ? stripTrailingCompanySuffix(msg.fromName.replace(/["']/g, "")) : "";
     if (!name || GENERIC_SENDER_NAMES.some((g) => name.toLowerCase().includes(g))) return undefined;
     return finalize(name, undefined, [`company "${name}" from ATS sender display name (fallback)`]);
   }
+
+  if ((HELPDESK_DOMAINS as readonly string[]).includes(domain)) return extractCompanyFromHelpdesk(msg);
 
   const excluded = [...ASSESSMENT_DOMAINS, ...NON_EMPLOYER_SENDER_DOMAINS] as readonly string[];
   const label = domain.split(".")[0]!;

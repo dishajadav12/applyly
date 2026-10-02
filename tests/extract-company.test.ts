@@ -120,3 +120,16 @@ describe("extractCompanyFromSender: team suffixes", () => {
     expect(extractCompanyFromSender(msg({ from: "no-reply@ashbyhq.com", fromName: "Acme Digital Talent Team" }))?.company).toBe("Acme Digital");
   });
 });
+
+describe("help-desk senders (Zendesk etc.)", () => {
+  it("names the employer from the display name, never the vendor", () => {
+    const r = extractCompanyFromSender(msg({ from: "support@roblox-assessment.zendesk.com", fromName: "Roblox Early Careers" }));
+    expect(r?.company).toBe("Roblox");
+  });
+
+  it("falls back to the vendor subdomain, then a [Tag] in the subject, else undefined", () => {
+    expect(extractCompanyFromSender(msg({ from: "support@roblox-assessment.zendesk.com", fromName: "Support" }))?.company).toBe("Roblox");
+    expect(extractCompanyFromSender(msg({ from: "support@zendesk.com", fromName: "Support", subject: "[Acme] Re: your question" }))?.company).toBe("Acme");
+    expect(extractCompanyFromSender(msg({ from: "support@zendesk.com", fromName: "Support" }))).toBeUndefined();
+  });
+});

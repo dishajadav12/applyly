@@ -5,12 +5,15 @@ import {
   ATS_DOMAINS,
   CANDIDATE_PORTAL_PATTERNS,
   CLASSIFY_SCORE_THRESHOLD,
+  EMAIL_TRACKER_DOMAINS,
+  EMAIL_TRACKER_PHRASES,
   EVENT_TYPE_PRIORITY,
   MARKETING_WORDS,
   NOREPLY_PATTERNS,
   REJECTION_CONTEXT_WORD,
   REJECTION_PHRASES,
   SCORE_WEIGHTS,
+  SURVEY_PHRASES,
   type EventType,
 } from "@/lib/config";
 import { registrableDomain } from "@/lib/gmail/domains";
@@ -231,6 +234,18 @@ export function classify(msg: NormalizedMessage, context: ClassifyContext = {}):
   if (alertPhrase && (domain === "linkedin.com" || domain === "indeed.com")) {
     score += SCORE_WEIGHTS.jobAlert;
     reasons.push(`${SCORE_WEIGHTS.jobAlert} LinkedIn/Indeed job-alert phrase "${alertPhrase}"`);
+  }
+
+  const surveyPhrase = SURVEY_PHRASES.find((p) => includesPhrase(subject, p) || includesPhrase(body, p));
+  if (surveyPhrase) {
+    score += SCORE_WEIGHTS.supportSurvey;
+    reasons.push(`${SCORE_WEIGHTS.supportSurvey} support-survey phrase "${surveyPhrase}"`);
+  }
+
+  const trackerPhrase = EMAIL_TRACKER_PHRASES.find((p) => includesPhrase(subject, p));
+  if ((domain && (EMAIL_TRACKER_DOMAINS as readonly string[]).includes(domain)) || trackerPhrase) {
+    score += SCORE_WEIGHTS.emailTracker;
+    reasons.push(`${SCORE_WEIGHTS.emailTracker} email open-tracker notification (${trackerPhrase ? `subject phrase "${trackerPhrase}"` : `sender "${domain}"`})`);
   }
 
   const isSelf = msg.labelIds.includes("SENT") || msg.from.toLowerCase() === context.selfEmail?.toLowerCase();

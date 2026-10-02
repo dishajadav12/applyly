@@ -59,3 +59,22 @@ export function titleCase(s: string): string {
     .map((w) => w[0]!.toUpperCase() + w.slice(1))
     .join(" ");
 }
+
+/**
+ * Whether `displayName` is a person's name for the mailbox `email`: two or three capitalized
+ * alphabetic words, at least one of which (or first-initial + surname) appears in the address
+ * local part ("Eileen Poeung" <eileen.poeung@x.com> / <epoeung@x.com>). A company display name
+ * ("Goldman Sachs" <gs-recruiting@x.com>) doesn't match the address, so it isn't taken for a person.
+ */
+export function looksLikePersonName(displayName: string, email: string): boolean {
+  const words = displayName.trim().split(/\s+/);
+  if (words.length < 2 || words.length > 3 || !words.every((w) => /^[A-Z][a-z'’-]{1,}$/.test(w))) return false;
+  const local = (email.split("@")[0] ?? "").toLowerCase().replace(/[^a-z]/g, "");
+  const first = words[0]!.toLowerCase().replace(/[^a-z]/g, "");
+  const last = words[words.length - 1]!.toLowerCase().replace(/[^a-z]/g, "");
+  return (
+    (first.length >= 3 && local.includes(first)) ||
+    (last.length >= 3 && local.includes(last)) ||
+    local.startsWith(first[0]! + last)
+  );
+}

@@ -24,6 +24,26 @@ export function stripFooters(text: string): string {
     .trim();
 }
 
+/**
+ * Repairs UTF-8 read as Windows-1252/Latin-1, which leaves a stray "Â" where a non-breaking space was
+ * ("2027Â and") and "â€™"-style sequences for curly quotes/dashes, so they can't leak into extracted fields.
+ */
+export function fixMojibake(s: string): string {
+  return s
+    .replace(/Â[\u00a0 ]/g, " ")
+    .replace(/Â(?=[^\w]|$)/g, "")
+    .replace(/â€™/g, "’")
+    .replace(/â€˜/g, "‘")
+    .replace(/â€œ|â€\u009d|â€/g, '"')
+    .replace(/â€“/g, "–")
+    .replace(/â€”/g, "—");
+}
+
 export function normalizeMessage(parsed: ParsedMessage): NormalizedMessage {
-  return { ...parsed, text: stripFooters(parsed.text) };
+  return {
+    ...parsed,
+    subject: parsed.subject && fixMojibake(parsed.subject),
+    fromName: parsed.fromName ? fixMojibake(parsed.fromName) : parsed.fromName,
+    text: stripFooters(parsed.text && fixMojibake(parsed.text)),
+  };
 }

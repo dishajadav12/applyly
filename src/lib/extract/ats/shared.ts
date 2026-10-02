@@ -1,7 +1,7 @@
 import { GENERIC_SENDER_NAMES } from "@/lib/config";
 import { registrableDomain } from "@/lib/gmail/domains";
 import type { NormalizedMessage } from "../normalize";
-import { stripTrailingCompanySuffix } from "../text-utils";
+import { looksLikePersonName, stripTrailingCompanySuffix } from "../text-utils";
 
 export type AtsCompanyResult = { company?: string; atsSource: string; reasons: string[] };
 
@@ -26,7 +26,7 @@ export function extractFromNameOrSubject(
   if (msg.fromName) {
     const stripped = stripTrailingCompanySuffix(msg.fromName);
     const lower = stripped.toLowerCase();
-    if (stripped && lower !== excludedName.toLowerCase() && !GENERIC_SENDER_NAMES.some((g) => lower.includes(g))) {
+    if (stripped && lower !== excludedName.toLowerCase() && !GENERIC_SENDER_NAMES.some((g) => lower.includes(g)) && !looksLikePersonName(stripped, msg.from)) {
       reasons.push(`company from ${label} sender display name "${msg.fromName}"`);
       return { company: stripped, atsSource, reasons };
     }

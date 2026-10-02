@@ -1,7 +1,7 @@
 // All tunable lists and thresholds live here (see PROJECT_SPEC.md A6/A7).
 // Bump PARSER_VERSION whenever extraction behavior changes.
 
-export const PARSER_VERSION = 8;
+export const PARSER_VERSION = 11;
 
 /** Job-related if classification score >= this. */
 export const CLASSIFY_SCORE_THRESHOLD = 3;
@@ -42,6 +42,12 @@ export const ATS_DOMAINS = [
   "dover.com",
   "gem.com",
 ] as const;
+
+/**
+ * ATS vendors that also hire (staff email candidates as employees). A person writing from one of these
+ * domains means the vendor itself is the employer; for other ATS domains a person's name is never a company.
+ */
+export const VENDOR_AS_EMPLOYER_DOMAINS: readonly string[] = ["rippling.com", "gem.com", "dover.com", "workable.com"];
 
 /** Third-party assessment / interview platform sender domains. */
 export const ASSESSMENT_DOMAINS = [
@@ -115,6 +121,9 @@ export const Q2_PHRASES = [
 
 export const Q2_SUBJECT_TERMS = ["interview"] as const;
 
+/** Email open-tracking tools (Mailtrack etc.): their "opened" notifications are never application events. */
+export const EMAIL_TRACKER_DOMAINS: readonly string[] = ["mailtrack.io", "mailtrack.com", "mailtracker.com", "mailtracker.io", "mailtracking.com", "yesware.com", "mixmax.com", "getnotify.com", "bananatag.com", "mailspring.com"];
+
 /** Noise senders excluded from Q2 (newsletters, job-alert digests). */
 export const Q2_EXCLUDED_SENDERS = [
   "substack.com",
@@ -123,6 +132,7 @@ export const Q2_EXCLUDED_SENDERS = [
   "mailchimpapp.net",
   "jobs-listings@linkedin.com",
   "jobalerts-noreply@linkedin.com",
+  ...EMAIL_TRACKER_DOMAINS,
 ] as const;
 
 /** Q3: LinkedIn / Indeed application confirmations. */
@@ -178,6 +188,8 @@ export const SCORE_WEIGHTS = {
   unsubscribeWithMarketing: -4,
   jobAlert: -6,
   sentByUser: -10,
+  supportSurvey: -6,
+  emailTracker: -10,
 } as const;
 
 /** Application phrases matched in subject/body for positive scoring. */
@@ -255,6 +267,9 @@ export const COMPANY_SUFFIXES = [
   "careers",
   "talent",
   "hiring team",
+  "early careers",
+  "early career",
+  "university recruiting",
   "talent team",
   "recruiting team",
   "careers team",
@@ -264,8 +279,20 @@ export const COMPANY_SUFFIXES = [
 /** Substrings of ATS display names that name the vendor, not the employer; never used as a company fallback. */
 export const GENERIC_SENDER_NAMES: readonly string[] = ["greenhouse", "lever", "workday", "ashby", "no-reply", "noreply", "do not reply", "jobvite", "icims", "smartrecruiters", "notification", "workable", "rippling"];
 
+/**
+ * Customer-support / help-desk platforms. Employers run candidate support (e.g. assessment help) through them,
+ * so the sender domain names the vendor (Zendesk), never the employer.
+ */
+export const HELPDESK_DOMAINS: readonly string[] = ["zendesk.com", "freshdesk.com", "freshservice.com", "helpscoutmail.com", "intercom-mail.com", "intercom.io", "zohodesk.com", "kayako.com", "desk.com"];
+
+/** Subject/body wording of open-tracking notifications (checked in the subject only, to avoid false hits). */
+export const EMAIL_TRACKER_PHRASES = ["mailtracker", "mailtrack", "email tracker", "was opened by", "has been opened", "opened your email"] as const;
+
+/** Support-survey (CSAT) wording: such mail is never an application event. */
+export const SURVEY_PHRASES = ["rate the support", "rate your support", "how did we do", "satisfaction survey", "rate your experience with"] as const;
+
 /** Job boards and aggregators: their sender domain is never the employer. */
-export const NON_EMPLOYER_SENDER_DOMAINS: readonly string[] = ["linkedin.com", "indeed.com", "glassdoor.com", "ziprecruiter.com", "joinhandshake.com", "wellfound.com", "simplify.jobs", "substack.com"];
+export const NON_EMPLOYER_SENDER_DOMAINS: readonly string[] = ["linkedin.com", "indeed.com", "glassdoor.com", "ziprecruiter.com", "joinhandshake.com", "wellfound.com", "simplify.jobs", "substack.com", ...HELPDESK_DOMAINS, ...EMAIL_TRACKER_DOMAINS];
 
 /** Sender domain (or domain fragment) → canonical company name. */
 export const COMPANY_ALIASES: Record<string, string> = {
