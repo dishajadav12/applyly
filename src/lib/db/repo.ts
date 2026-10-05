@@ -57,6 +57,13 @@ export async function getGmailConnection(admin: Db, userId: string): Promise<Gma
   return data;
 }
 
+/** Auto-scan guard: lists every connection (admin client only). */
+export async function listGmailConnections(admin: Db): Promise<GmailConnection[]> {
+  const { data, error } = await admin.from("gmail_connections").select("*");
+  if (error) fail("listGmailConnections", error);
+  return data ?? [];
+}
+
 export async function upsertGmailConnection(
   admin: Db,
   row: TablesInsert<"gmail_connections">,

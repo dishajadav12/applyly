@@ -12,6 +12,12 @@ export const SCAN_STEP_BATCH_SIZE = 40;
 /** Phase 11: minimum gap between scan starts for one user, so repeated clicks can't spam Gmail/the DB. */
 export const SCAN_START_RATE_LIMIT_MS = 10_000;
 
+/** Auto-scan (cron): each run re-scans from the last finished scan minus this overlap; (user_id, message_id) idempotency makes the overlap free. */
+export const AUTO_SCAN_OVERLAP_MS = 24 * 60 * 60 * 1000;
+
+/** Auto-scan: stop stepping after this long so the run ends inside the function's maxDuration; an unfinished scan resumes on the next run. */
+export const AUTO_SCAN_TIME_BUDGET_MS = 45_000;
+
 /** Body text is truncated to this many bytes after decoding. */
 export const MAX_BODY_BYTES = 15 * 1024;
 
