@@ -55,6 +55,7 @@ const KEPT_HEADERS = [
   "from",
   "sender",
   "reply-to",
+  "to",
   "message-id",
   "in-reply-to",
   "date",

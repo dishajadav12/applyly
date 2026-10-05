@@ -1,0 +1,14 @@
+{
+  "description": "Ashby rejection worded 'will not be moving forward' / 'isn't an ideal fit', which must not be read as a confirmation",
+  "input": {
+    "from": "no-reply@ashbyhq.com",
+    "fromName": "Plato Hiring Team",
+    "subject": "Your application to Plato",
+    "text": "Hi Alex,\n\nThank you for applying for the Member of Technical Staff, Software Engineer role at Plato. After reviewing your application we've determined that there isn't an ideal fit at this time, and we will not be moving forward with your candidacy.\n\nWe appreciate your interest in Plato!\n\nAll the best,\n\nPlato Hiring Team"
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "rejection",
+    "company": "Plato"
+  }
+}

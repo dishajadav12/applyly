@@ -14,10 +14,12 @@ export type UserSettings = Tables<"user_settings">;
 export type GmailConnection = Tables<"gmail_connections">;
 export type Application = Tables<"applications">;
 export type EmailEvent = Tables<"email_events">;
+export type OutreachEmail = Tables<"outreach_emails">;
 export type ProcessedMessage = Tables<"processed_messages">;
 export type Scan = Tables<"scans">;
 export type ScanItem = Tables<"scan_items">;
 
+export type ScanKind = "full" | "outreach";
 export type ScanStatus = "listing" | "processing" | "done" | "failed" | "cancelled";
 
 /** Max rows per scan_items insert (A4). */
@@ -215,6 +217,21 @@ export async function dismissEvent(db: Db, messageId: string): Promise<void> {
   await updateEvent(db, messageId, { state: "dismissed", user_locked: true });
 }
 
+// --- outreach_emails -----------------------------------------------------------
+
+/** Idempotent on (user_id, message_id, to_email), so rescans never duplicate a row. */
+export async function upsertOutreach(db: Db, rows: TablesInsert<"outreach_emails">[]): Promise<void> {
+  if (rows.length === 0) return;
+  const { error } = await db.from("outreach_emails").upsert(rows, { onConflict: "user_id,message_id,to_email" });
+  if (error) fail("upsertOutreach", error);
+}
+
+export async function listOutreach(db: Db): Promise<OutreachEmail[]> {
+  const { data, error } = await db.from("outreach_emails").select("*").order("sent_at", { ascending: false });
+  if (error) fail("listOutreach", error);
+  return data;
+}
+
 // --- processed_messages ------------------------------------------------------
 
 /** Which of these IDs were already processed under this parser version. */
@@ -292,7 +309,7 @@ export async function getActiveScan(db: Db): Promise<Scan | null> {
  */
 export async function createScan(
   db: Db,
-  row: Pick<TablesInsert<"scans">, "user_id" | "range_start" | "range_end">,
+  row: Pick<TablesInsert<"scans">, "user_id" | "range_start" | "range_end" | "kind">,
 ): Promise<Scan | null> {
   const { data, error } = await db.from("scans").insert({ ...row, status: "listing" }).select("*").single();
   if (error) {

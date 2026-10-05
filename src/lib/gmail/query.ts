@@ -1,4 +1,5 @@
 import {
+  FREEMAIL_DOMAINS,
   GMAIL_LIST_PAGE_SIZE,
   Q1_DOMAINS,
   Q2_EXCLUDED_SENDERS,
@@ -7,6 +8,8 @@ import {
   Q4_EXCLUDED_SENDERS,
   Q4_SENDER_TERMS,
   Q5_DOMAINS_PER_QUERY,
+  Q6_SENT_PHRASES,
+  Q6_SENT_SUBJECT_TERMS,
   Q3_SENDERS,
   Q3_SUBJECT_TERMS,
   QUERY_EXCLUSIONS,
@@ -49,6 +52,15 @@ export function buildLearnedDomainQueries(domains: readonly string[], rangeStart
     queries.push(`from:(${domains.slice(i, i + Q5_DOMAINS_PER_QUERY).join(" OR ")}) ${suffix}`);
   }
   return queries;
+}
+
+/** Q6 (beyond spec A6): the user's own sent mail that reads like recruiter outreach (see Q6_* in config). */
+export function buildSentQuery(rangeStart: Date, rangeEnd: Date, opts: { all?: boolean } = {}): string {
+  const suffix = `after:${epochSeconds(rangeStart)} before:${epochSeconds(rangeEnd)} ${QUERY_EXCLUSIONS}`;
+  // `all`: every sent message not addressed to a freemail address (those name no company anyway); no wording filter.
+  if (opts.all) return `in:sent -to:(${FREEMAIL_DOMAINS.join(" OR ")}) ${suffix}`;
+  const terms = [...Q6_SENT_PHRASES.map((p) => `"${p}"`), ...Q6_SENT_SUBJECT_TERMS.map((t) => `subject:${t}`)];
+  return `in:sent (${terms.join(" OR ")}) ${suffix}`;
 }
 
 /** The slice of the Gmail client that listing needs (keeps this module pure and easy to test). */

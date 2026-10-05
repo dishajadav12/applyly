@@ -1,7 +1,7 @@
 // All tunable lists and thresholds live here (see PROJECT_SPEC.md A6/A7).
 // Bump PARSER_VERSION whenever extraction behavior changes.
 
-export const PARSER_VERSION = 11;
+export const PARSER_VERSION = 13;
 
 /** Job-related if classification score >= this. */
 export const CLASSIFY_SCORE_THRESHOLD = 3;
@@ -116,6 +116,10 @@ export const Q2_PHRASES = [
   "virtual onsite",
   "other candidates",
   "not moving forward",
+  "not be moving forward",
+  "will not move forward",
+  "not an ideal fit",
+  "an ideal fit at this time",
   "move forward with other",
   "decided not to proceed",
   "no longer under consideration",
@@ -172,6 +176,13 @@ export const Q4_EXCLUDED_SENDERS = [...Q2_EXCLUDED_SENDERS, "linkedin.com", "gla
 
 /** Q5: learned employer domains per scan, split so no single Gmail query gets too long. */
 export const Q5_DOMAINS_PER_QUERY = 40;
+
+/**
+ * Q6 (beyond spec A6): the user's own sent mail that reads like recruiter outreach. Sent mail is
+ * otherwise never listed, and `in:sent` alone would pull in every personal email.
+ */
+export const Q6_SENT_PHRASES = ["following up", "follow up", "my resume", "my cv", "referral", "referred", "opportunity", "open role", "open position", "career opportunities"] as const;
+export const Q6_SENT_SUBJECT_TERMS = ["application", "applying", "applied", "resume", "role", "position", "opening", "opportunity", "hiring", "recruiter", "interview", "candidate"] as const;
 
 /** Appended to every query. */
 export const QUERY_EXCLUSIONS = "-in:chats -in:spam -in:trash";
@@ -234,6 +245,10 @@ export const ALERT_PHRASES = [
 export const REJECTION_PHRASES = [
   "other candidates",
   "not moving forward",
+  "not be moving forward",
+  "will not move forward",
+  "not an ideal fit",
+  "an ideal fit at this time",
   "decided not to proceed",
   "no longer under consideration",
   "position has been filled",

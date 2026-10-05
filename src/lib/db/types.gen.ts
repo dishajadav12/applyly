@@ -196,6 +196,48 @@ export type Database = {
         }
         Relationships: []
       }
+      outreach_emails: {
+        Row: {
+          company: string
+          company_key: string
+          message_id: string
+          parser_version: number
+          rfc822_message_id: string | null
+          sent_at: string
+          subject: string
+          thread_id: string
+          to_email: string
+          to_name: string | null
+          user_id: string
+        }
+        Insert: {
+          company: string
+          company_key: string
+          message_id: string
+          parser_version: number
+          rfc822_message_id?: string | null
+          sent_at: string
+          subject: string
+          thread_id: string
+          to_email: string
+          to_name?: string | null
+          user_id: string
+        }
+        Update: {
+          company?: string
+          company_key?: string
+          message_id?: string
+          parser_version?: number
+          rfc822_message_id?: string | null
+          sent_at?: string
+          subject?: string
+          thread_id?: string
+          to_email?: string
+          to_name?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       processed_messages: {
         Row: {
           is_job_related: boolean
@@ -263,6 +305,7 @@ export type Database = {
           finished_at: string | null
           id: string
           job_related: number
+          kind: string
           lock_token: string | null
           locked_until: string | null
           processed: number
@@ -280,6 +323,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           job_related?: number
+          kind?: string
           lock_token?: string | null
           locked_until?: string | null
           processed?: number
@@ -297,6 +341,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           job_related?: number
+          kind?: string
           lock_token?: string | null
           locked_until?: string | null
           processed?: number

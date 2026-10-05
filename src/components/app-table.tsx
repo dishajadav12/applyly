@@ -17,7 +17,15 @@ const STATUS_INDEX: Record<string, number> = Object.fromEntries(STATUS_DISPLAY_O
 const statusIndex = (status: string) => STATUS_INDEX[status] ?? STATUS_DISPLAY_ORDER.length;
 
 /** A9: server-fetched application rows, sorted/filtered/searched entirely client-side. */
-export function AppTable({ applications, onSelect }: { applications: Application[]; onSelect: (id: string) => void }) {
+export function AppTable({
+  applications,
+  outreachEmails = {},
+  onSelect,
+}: {
+  applications: Application[];
+  outreachEmails?: Record<string, string[]>;
+  onSelect: (id: string) => void;
+}) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("applied");
@@ -113,6 +121,7 @@ export function AppTable({ applications, onSelect }: { applications: Application
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-background">
             <TableRow>
+              <TableHead className="w-10">#</TableHead>
               <SortableHead label="Company" active={sortKey === "company"} dir={sortDir} onClick={() => toggleSort("company")} />
               <TableHead>Role</TableHead>
               <SortableHead label="Applied" active={sortKey === "applied"} dir={sortDir} onClick={() => toggleSort("applied")} />
@@ -121,8 +130,9 @@ export function AppTable({ applications, onSelect }: { applications: Application
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sorted.map((app) => (
+            {sorted.map((app, i) => (
               <TableRow key={app.id} onClick={() => onSelect(app.id)} className="cursor-pointer">
+                <TableCell className="text-muted-foreground tabular-nums">{i + 1}</TableCell>
                 <TableCell className="font-medium">
                   <span className="flex items-center gap-1.5">
                     {app.needs_review && <span className="size-1.5 shrink-0 rounded-full bg-amber-500" title="Needs review" />}
@@ -137,17 +147,7 @@ export function AppTable({ applications, onSelect }: { applications: Application
                   <StatusBadge status={app.status as Status} />
                 </TableCell>
                 <TableCell>
-                  {app.primary_recruiter_email ? (
-                    <a
-                      href={`mailto:${app.primary_recruiter_email}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-primary underline-offset-2 hover:underline"
-                    >
-                      {app.primary_recruiter_email}
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
+                  <RecruiterCell primary={app.primary_recruiter_email} emailed={outreachEmails[app.company_key]} />
                 </TableCell>
               </TableRow>
             ))}
@@ -155,6 +155,26 @@ export function AppTable({ applications, onSelect }: { applications: Application
         </Table>
       )}
     </div>
+  );
+}
+
+/** The application's own recruiter, else the recruiters the user has emailed at this company. */
+function RecruiterCell({ primary, emailed = [] }: { primary: string | null; emailed?: string[] }) {
+  const emails = primary ? [primary] : emailed;
+  if (emails.length === 0) return <span className="text-muted-foreground">—</span>;
+  return (
+    <span className="flex flex-col">
+      {emails.map((email) => (
+        <a
+          key={email}
+          href={`mailto:${email}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-primary underline-offset-2 hover:underline"
+        >
+          {email}
+        </a>
+      ))}
+    </span>
   );
 }
 

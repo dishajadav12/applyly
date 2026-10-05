@@ -8,6 +8,7 @@ import type { TablesInsert, TablesUpdate } from "@/lib/db/types.gen";
 import { normalizeCompanyKey } from "@/lib/extract/company";
 import { extractFromMessage, type ExtractionResult } from "@/lib/extract";
 import { normalizeMessage } from "@/lib/extract/normalize";
+import { extractOutreach } from "@/lib/extract/outreach";
 import { createGmailClient, getMessage, pool } from "@/lib/gmail/client";
 import { parseMessage, type ParsedMessage } from "@/lib/gmail/mime";
 import { getAccessToken, NeedsReconnectError } from "@/lib/gmail/tokens";
@@ -54,7 +55,7 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
 
     if (items.length === 0) {
       const { error: failedCount } = await reconcileProcessedCount(db, scanId, scan);
-      await finishScan(db, userId, scanId);
+      await finishScan(db, userId, scanId, scan.kind);
       return { done: true, ...toCounters((await repo.getScan(db, scanId))!, failedCount) };
     }
 
@@ -76,6 +77,8 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
       try {
         const raw = await getMessage(client, item.message_id, { format: "full" });
         const parsed = parseMessage(raw);
+        // Outreach-only scans never classify, so no extraction (or AI call) happens.
+        if (scan.kind === "outreach") return { messageId: item.message_id, parsed };
         let extraction = extractFromMessage(parsed, classifyContext);
         if (aiProvider && isAiEligible(extraction)) {
           const { text } = normalizeMessage(parsed);
@@ -102,6 +105,11 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
     const touchedApplicationIds = new Set<string>();
 
     for (const r of fetched) {
+      if (scan.kind === "outreach" && r.parsed && !r.error) {
+        await recordOutreach(db, userId, r.parsed, classifyContext.selfEmail);
+        await repo.markScanItem(db, scanId, r.messageId, "done");
+        continue;
+      }
       if (r.error || !r.parsed || !r.extraction) {
         await repo.markScanItem(db, scanId, r.messageId, "error", r.error ?? "Unknown error");
         continue;
@@ -110,6 +118,9 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
       await repo.markProcessed(db, [
         { user_id: userId, message_id: r.messageId, parser_version: PARSER_VERSION, is_job_related: r.extraction.isJobRelated },
       ]);
+
+      // Sent mail to a company recipient is kept as a recruiter-outreach reference (independent of job classification).
+      await recordOutreach(db, userId, r.parsed, classifyContext.selfEmail);
 
       if (r.extraction.isJobRelated) {
         jobRelatedDelta++;
@@ -148,13 +159,34 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
       const reconciled = await reconcileProcessedCount(db, scanId, { ...scan, processed: counters.processed });
       if (reconciled.processed !== undefined) counters.processed = reconciled.processed;
       counters.failed = reconciled.error;
-      await finishScan(db, userId, scanId);
+      await finishScan(db, userId, scanId, scan.kind);
     }
 
     return { done, ...counters };
   } finally {
     await repo.releaseScanLease(db, scanId, lockToken);
   }
+}
+
+/** Stores one outreach_emails row per company recipient of a sent message; IDs, subject and addresses only. */
+async function recordOutreach(db: Db, userId: string, parsed: ParsedMessage, selfEmail: string | undefined): Promise<void> {
+  const { recipients } = extractOutreach(parsed, selfEmail);
+  await repo.upsertOutreach(
+    db,
+    recipients.map((r) => ({
+      user_id: userId,
+      message_id: parsed.messageId,
+      to_email: r.email,
+      to_name: r.name ?? null,
+      thread_id: parsed.threadId,
+      rfc822_message_id: parsed.rfc822MessageId ?? null,
+      company: r.company,
+      company_key: r.companyKey,
+      subject: parsed.subject,
+      sent_at: parsed.receivedAt,
+      parser_version: PARSER_VERSION,
+    })),
+  );
 }
 
 /**
@@ -198,10 +230,11 @@ export async function retryFailedScanItems(db: Db, userId: string, scanId: strin
   return { retried };
 }
 
-async function finishScan(db: Db, userId: string, scanId: string): Promise<void> {
-  await rematchReviewEvents(db);
+async function finishScan(db: Db, userId: string, scanId: string, kind: string): Promise<void> {
+  // Outreach-only scans leave the dashboard alone: no re-matching, and last_scan_at (which anchors auto-scan) stays put.
+  if (kind !== "outreach") await rematchReviewEvents(db);
   await repo.updateScan(db, scanId, { status: "done", finished_at: new Date().toISOString() });
-  await repo.setLastScanAt(db, userId, new Date());
+  if (kind !== "outreach") await repo.setLastScanAt(db, userId, new Date());
 }
 
 /**

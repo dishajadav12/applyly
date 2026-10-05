@@ -6,7 +6,7 @@ import { NeedsReconnectError } from "@/lib/gmail/tokens";
 import { startScan } from "@/lib/scan/start";
 import { createClient } from "@/lib/supabase/server";
 
-const bodySchema = z.object({ rangeStart: z.iso.datetime(), rangeEnd: z.iso.datetime() });
+const bodySchema = z.object({ rangeStart: z.iso.datetime(), rangeEnd: z.iso.datetime(), kind: z.enum(["full", "outreach"]).default("full") });
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await startScan(supabase, userId, rangeStart, rangeEnd);
+    const result = await startScan(supabase, userId, rangeStart, rangeEnd, parsed.data.kind);
     if (!result.ok) {
       return NextResponse.json({ error: "A scan is already running", scanId: result.activeScanId }, { status: 409 });
     }
