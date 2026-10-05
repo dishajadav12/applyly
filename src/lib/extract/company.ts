@@ -4,6 +4,7 @@ import { extractAshbyCompany } from "./ats/ashby";
 import { extractAssessmentCompany } from "./ats/assessment";
 import { extractGreenhouseCompany } from "./ats/greenhouse";
 import { extractLeverCompany } from "./ats/lever";
+import { extractWorkAtAStartupCompany } from "./ats/workatastartup";
 import { extractWorkdayCompany } from "./ats/workday";
 import type { NormalizedMessage } from "./normalize";
 import { NAME_RUN, looksLikePersonName, normalizeCompanyKey, sentenceCasePhrase, stripTrailingCompanySuffix, titleCase } from "./text-utils";
@@ -26,6 +27,7 @@ const ATS_PARSERS = [
   extractWorkdayCompany,
   extractAshbyCompany,
   extractAssessmentCompany,
+  extractWorkAtAStartupCompany,
 ];
 
 function finalize(company: string, atsSource: string | undefined, reasons: string[]): CompanyExtraction {

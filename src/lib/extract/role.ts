@@ -1,4 +1,5 @@
 import { MAX_ROLE_LENGTH, ROLE_KEYWORDS } from "@/lib/config";
+import { isWorkAtAStartupSender, WAAS_SUBJECT_PATTERN } from "./ats/workatastartup";
 import type { NormalizedMessage } from "./normalize";
 import { escapeRegex } from "./text-utils";
 
@@ -88,6 +89,16 @@ function containsRoleKeyword(s: string): boolean {
  */
 export function extractRole(msg: NormalizedMessage): RoleExtraction {
   const reasons: string[] = [];
+
+  // Work at a Startup subjects read "application for <Company> - <Role> (<Team>)": the role is after the dash.
+  if (isWorkAtAStartupSender(msg.from)) {
+    const role = msg.subject.match(WAAS_SUBJECT_PATTERN)?.[2];
+    const cleaned = role ? cleanRole(role) : undefined;
+    if (cleaned && isValidCapture(cleaned)) {
+      reasons.push("role from Work at a Startup subject pattern");
+      return { role: cleaned, reasons };
+    }
+  }
 
   for (const [haystackName, haystack] of [
     ["subject", msg.subject],

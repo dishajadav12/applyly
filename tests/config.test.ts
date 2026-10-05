@@ -8,7 +8,7 @@ import {
 
 describe("config", () => {
   it("exposes the baseline parser version and threshold", () => {
-    expect(PARSER_VERSION).toBe(13);
+    expect(PARSER_VERSION).toBe(14);
     expect(CLASSIFY_SCORE_THRESHOLD).toBe(3);
   });
 

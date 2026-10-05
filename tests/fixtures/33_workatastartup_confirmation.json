@@ -1,0 +1,16 @@
+{
+  "description": "Y Combinator Work at a Startup confirmation: the company is in the body/subject, never Y Combinator",
+  "input": {
+    "from": "workatastartup@ycombinator.com",
+    "fromName": "Y Combinator",
+    "subject": "Your application for Corgi Insurance - Software Engineer (Operations Team)",
+    "text": "Hi Alex,\n\nYour application to Corgi Insurance has been received. If there is a fit, the team will get back to you over email.\n\nHundreds of well-funded startups are hiring on YC's jobs platform.\n\n— Y Combinator Team"
+  },
+  "expected": {
+    "isJobRelated": true,
+    "eventType": "application_confirmation",
+    "company": "Corgi Insurance",
+    "role": "Software Engineer (Operations Team)",
+    "atsSource": "workatastartup"
+  }
+}
