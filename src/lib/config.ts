@@ -1,7 +1,7 @@
 // All tunable lists and thresholds live here (see PROJECT_SPEC.md A6/A7).
 // Bump PARSER_VERSION whenever extraction behavior changes.
 
-export const PARSER_VERSION = 14;
+export const PARSER_VERSION = 15;
 
 /** Job-related if classification score >= this. */
 export const CLASSIFY_SCORE_THRESHOLD = 3;
@@ -132,7 +132,7 @@ export const Q2_PHRASES = [
 export const Q2_SUBJECT_TERMS = ["interview"] as const;
 
 /** Email open-tracking tools (Mailtrack etc.): their "opened" notifications are never application events. */
-export const EMAIL_TRACKER_DOMAINS: readonly string[] = ["mailtrack.io", "mailtrack.com", "mailtracker.com", "mailtracker.io", "mailtracking.com", "yesware.com", "mixmax.com", "getnotify.com", "bananatag.com", "mailspring.com"];
+export const EMAIL_TRACKER_DOMAINS: readonly string[] = ["mailtrack.io", "mailtrack.com", "getmailtracker.com", "getmailtracker.io", "mailtracker.com", "mailtracker.io", "mailtracking.com", "yesware.com", "mixmax.com", "getnotify.com", "bananatag.com", "mailspring.com"];
 
 /** Noise senders excluded from Q2 (newsletters, job-alert digests). */
 export const Q2_EXCLUDED_SENDERS = [
@@ -307,6 +307,9 @@ export const GENERIC_SENDER_NAMES: readonly string[] = ["greenhouse", "lever", "
 export const HELPDESK_DOMAINS: readonly string[] = ["zendesk.com", "freshdesk.com", "freshservice.com", "helpscoutmail.com", "intercom-mail.com", "intercom.io", "zohodesk.com", "kayako.com", "desk.com"];
 
 /** Subject/body wording of open-tracking notifications (checked in the subject only, to avoid false hits). */
+/** Any sender address or display name containing this is an email tracker, whatever its exact domain ("getmailtracker", "mailtrack.io", …). */
+export const EMAIL_TRACKER_SENDER_FRAGMENT = "mailtrack";
+
 export const EMAIL_TRACKER_PHRASES = ["mailtracker", "mailtrack", "email tracker", "was opened by", "has been opened", "opened your email"] as const;
 
 /** Support-survey (CSAT) wording: such mail is never an application event. */

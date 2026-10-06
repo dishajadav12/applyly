@@ -7,6 +7,7 @@ import {
   CLASSIFY_SCORE_THRESHOLD,
   EMAIL_TRACKER_DOMAINS,
   EMAIL_TRACKER_PHRASES,
+  EMAIL_TRACKER_SENDER_FRAGMENT,
   EVENT_TYPE_PRIORITY,
   MARKETING_WORDS,
   NOREPLY_PATTERNS,
@@ -243,7 +244,8 @@ export function classify(msg: NormalizedMessage, context: ClassifyContext = {}):
   }
 
   const trackerPhrase = EMAIL_TRACKER_PHRASES.find((p) => includesPhrase(subject, p));
-  if ((domain && (EMAIL_TRACKER_DOMAINS as readonly string[]).includes(domain)) || trackerPhrase) {
+  const trackerSender = (domain && (EMAIL_TRACKER_DOMAINS as readonly string[]).includes(domain)) || `${msg.from} ${msg.fromName ?? ""}`.toLowerCase().includes(EMAIL_TRACKER_SENDER_FRAGMENT);
+  if (trackerSender || trackerPhrase) {
     score += SCORE_WEIGHTS.emailTracker;
     reasons.push(`${SCORE_WEIGHTS.emailTracker} email open-tracker notification (${trackerPhrase ? `subject phrase "${trackerPhrase}"` : `sender "${domain}"`})`);
   }

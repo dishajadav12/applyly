@@ -47,4 +47,11 @@ describe("email open-tracker notifications", () => {
     const m = normalizeMessage({ ...tracker, from: "noreply@unknown-tracker.com" } as never);
     expect(classify(m).isJobRelated).toBe(false);
   });
+
+  it("is caught by a tracker sender name even with a neutral subject and an unknown domain", () => {
+    const m = normalizeMessage({
+      ...tracker, from: "hello@some-new-domain.io", fromName: "GetMailTracker", subject: "Your application to Acme was viewed",
+    } as never);
+    expect(classify(m).isJobRelated).toBe(false);
+  });
 });
