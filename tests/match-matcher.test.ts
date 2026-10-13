@@ -35,6 +35,17 @@ describe("matchEvent: M1 (same thread)", () => {
     expect(result).toMatchObject({ action: "attach", applicationId: "app-9", matchConfidence: 1.0, rule: "M1" });
   });
 
+  it("does not attach when the email names a different role than the thread's application (back-to-back applications)", () => {
+    const result = matchEvent(
+      event({ threadId: "t1", companyKey: "palantir", role: "Software Engineer, New Grad" }),
+      ctx({
+        existingEvents: [{ messageId: "m1", threadId: "t1", state: "linked", applicationId: "app-9" }],
+        applications: [app({ id: "app-9", companyKey: "palantir", role: "Forward Deployed Software Engineer, New Grad - Commercial" })],
+      }),
+    );
+    expect(result).toMatchObject({ action: "create", rule: "M6" });
+  });
+
   it("ignores a same-thread event that isn't linked", () => {
     const result = matchEvent(
       event({ threadId: "t1", companyKey: undefined }),

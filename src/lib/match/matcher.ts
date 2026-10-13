@@ -66,9 +66,23 @@ export function matchEvent(event: MatchInputEvent, context: MatchContext): Match
     throw new Error("matchEvent must not be called for a user_locked event (D15); it keeps its existing application_id and state");
   }
 
-  // M1: same thread as an event already linked to an application.
+  // A different named role means a different application, even in the same thread / with the same req id
+  // (back-to-back applications at one company often share a Gmail thread).
+  const roleConflicts = (applicationId?: string): boolean => {
+    if (!event.role) return false;
+    const app = context.applications.find((a) => a.id === applicationId);
+    if (!app || app.role === "Unknown") return false;
+    return roleSimilarity(event.role, app.role) < ROLE_SIMILARITY_THRESHOLD;
+  };
+
+  // M1: same thread as an event already linked to an application (unless the email names a different role).
   const threadMatch = context.existingEvents.find(
-    (e) => e.threadId === event.threadId && e.state === "linked" && e.applicationId && e.messageId !== event.messageId,
+    (e) =>
+      e.threadId === event.threadId &&
+      e.state === "linked" &&
+      e.applicationId &&
+      e.messageId !== event.messageId &&
+      !roleConflicts(e.applicationId),
   );
   if (threadMatch?.applicationId) {
     return {
@@ -82,7 +96,7 @@ export function matchEvent(event: MatchInputEvent, context: MatchContext): Match
 
   // M2: same req_id as an application.
   if (event.reqId) {
-    const reqMatch = context.applications.find((a) => a.reqIds.includes(event.reqId!));
+    const reqMatch = context.applications.find((a) => a.reqIds.includes(event.reqId!) && !roleConflicts(a.id));
     if (reqMatch) {
       return {
         action: "attach",
