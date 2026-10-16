@@ -99,6 +99,25 @@ export async function listApplications(db: Db): Promise<Application[]> {
   return data;
 }
 
+export type LatestUpdate = { at: string; eventType: string };
+
+/** Per application: its newest linked email that is more than the initial confirmation (a stage event: rejection, interview, offer, ...). */
+export async function listLatestUpdates(db: Db): Promise<Record<string, LatestUpdate>> {
+  const { data, error } = await db
+    .from("email_events")
+    .select("application_id, event_type, received_at")
+    .not("application_id", "is", null)
+    .in("event_type", ["assessment", "interview_invite", "final_interview", "offer", "rejection", "withdrawal"])
+    .order("received_at", { ascending: false })
+    .limit(5000);
+  if (error) fail("listLatestUpdates", error);
+  const latest: Record<string, LatestUpdate> = {};
+  for (const e of data) {
+    if (e.application_id && !latest[e.application_id]) latest[e.application_id] = { at: e.received_at, eventType: e.event_type };
+  }
+  return latest;
+}
+
 export async function getApplication(db: Db, id: string): Promise<Application | null> {
   const { data, error } = await db.from("applications").select("*").eq("id", id).maybeSingle();
   if (error) fail("getApplication", error);

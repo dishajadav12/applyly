@@ -1,7 +1,7 @@
 // All tunable lists and thresholds live here (see PROJECT_SPEC.md A6/A7).
 // Bump PARSER_VERSION whenever extraction behavior changes.
 
-export const PARSER_VERSION = 15;
+export const PARSER_VERSION = 16;
 
 /** Job-related if classification score >= this. */
 export const CLASSIFY_SCORE_THRESHOLD = 3;
@@ -310,7 +310,7 @@ export const HELPDESK_DOMAINS: readonly string[] = ["zendesk.com", "freshdesk.co
 /** Any sender address or display name containing this is an email tracker, whatever its exact domain ("getmailtracker", "mailtrack.io", …). */
 export const EMAIL_TRACKER_SENDER_FRAGMENT = "mailtrack";
 
-export const EMAIL_TRACKER_PHRASES = ["mailtracker", "mailtrack", "email tracker", "was opened by", "has been opened", "opened your email"] as const;
+export const EMAIL_TRACKER_PHRASES = ["mailtracker", "mailtrack", "email tracker", "was opened by", "has been opened", "opened your email", "has just read", "just read", "didn't open", "did not open", "hasn't opened", "has not opened"] as const;
 
 /** Support-survey (CSAT) wording: such mail is never an application event. */
 export const SURVEY_PHRASES = ["rate the support", "rate your support", "how did we do", "satisfaction survey", "rate your experience with"] as const;

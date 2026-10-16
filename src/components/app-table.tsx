@@ -6,11 +6,11 @@ import { StatusBadge } from "@/components/status-badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { STATUS_DISPLAY_ORDER, type Status } from "@/lib/config";
-import type { Application } from "@/lib/db/repo";
+import { EVENT_TYPE_LABELS, STATUS_DISPLAY_ORDER, type EventType, type Status } from "@/lib/config";
+import type { Application, LatestUpdate } from "@/lib/db/repo";
 import { cn } from "@/lib/utils";
 
-type SortKey = "applied" | "company" | "status";
+type SortKey = "latest" | "applied" | "company" | "status";
 type SortDir = "asc" | "desc";
 
 const STATUS_INDEX: Record<string, number> = Object.fromEntries(STATUS_DISPLAY_ORDER.map((s, i) => [s, i]));
@@ -20,15 +20,17 @@ const statusIndex = (status: string) => STATUS_INDEX[status] ?? STATUS_DISPLAY_O
 export function AppTable({
   applications,
   outreachEmails = {},
+  latestUpdates = {},
   onSelect,
 }: {
   applications: Application[];
+  latestUpdates?: Record<string, LatestUpdate>;
   outreachEmails?: Record<string, string[]>;
   onSelect: (id: string) => void;
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("applied");
+  const [sortKey, setSortKey] = useState<SortKey>("latest");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -60,7 +62,7 @@ export function AppTable({
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      setSortDir(key === "applied" ? "desc" : "asc");
+      setSortDir(key === "applied" || key === "latest" ? "desc" : "asc");
     }
   }
 
@@ -78,6 +80,14 @@ export function AppTable({
     rows.sort((a, b) => {
       if (sortKey === "company") return dir * a.company.localeCompare(b.company);
       if (sortKey === "status") return dir * (statusIndex(a.status) - statusIndex(b.status));
+      // "latest": rows with an update come first (newest on top); rows without fall back to applied date.
+      if (sortKey === "latest") {
+        const au = latestUpdates[a.id] ? Date.parse(latestUpdates[a.id].at) : null;
+        const bu = latestUpdates[b.id] ? Date.parse(latestUpdates[b.id].at) : null;
+        if (au !== null && bu !== null) return dir * (au - bu);
+        if (au !== null) return -1;
+        if (bu !== null) return 1;
+      }
       // "applied": nulls always sort last, regardless of direction.
       const at = a.applied_at ? Date.parse(a.applied_at) : null;
       const bt = b.applied_at ? Date.parse(b.applied_at) : null;
@@ -87,7 +97,7 @@ export function AppTable({
       return dir * (at - bt);
     });
     return rows;
-  }, [filtered, sortKey, sortDir]);
+  }, [filtered, sortKey, sortDir, latestUpdates]);
 
   return (
     <div className="space-y-4">
@@ -125,6 +135,7 @@ export function AppTable({
               <SortableHead label="Company" active={sortKey === "company"} dir={sortDir} onClick={() => toggleSort("company")} />
               <TableHead>Role</TableHead>
               <SortableHead label="Applied" active={sortKey === "applied"} dir={sortDir} onClick={() => toggleSort("applied")} />
+              <SortableHead label="Latest update" active={sortKey === "latest"} dir={sortDir} onClick={() => toggleSort("latest")} />
               <SortableHead label="Status" active={sortKey === "status"} dir={sortDir} onClick={() => toggleSort("status")} />
               <TableHead>Recruiter</TableHead>
             </TableRow>
@@ -144,6 +155,9 @@ export function AppTable({
                   <AppliedDate date={app.applied_at} inferred={app.applied_date_source === "inferred"} />
                 </TableCell>
                 <TableCell>
+                  <LatestUpdateCell update={latestUpdates[app.id]} />
+                </TableCell>
+                <TableCell>
                   <StatusBadge status={app.status as Status} />
                 </TableCell>
                 <TableCell>
@@ -155,6 +169,17 @@ export function AppTable({
         </Table>
       )}
     </div>
+  );
+}
+
+function LatestUpdateCell({ update }: { update?: LatestUpdate }) {
+  if (!update) return <span className="text-muted-foreground">—</span>;
+  const label = EVENT_TYPE_LABELS[update.eventType as EventType] ?? "Update";
+  return (
+    <span className="flex flex-col">
+      <span>{format(new Date(update.at), "MMM d, yyyy")}</span>
+      <span className={cn("text-xs", update.eventType === "rejection" ? "text-destructive" : "text-muted-foreground")}>{label}</span>
+    </span>
   );
 }
 

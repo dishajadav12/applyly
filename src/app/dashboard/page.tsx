@@ -7,7 +7,7 @@ import { ReconnectBanner } from "@/components/reconnect-banner";
 import type { ActiveScan } from "@/components/scan-controls";
 import { ScanControls } from "@/components/scan-controls";
 import { buttonVariants } from "@/components/ui/button";
-import { getActiveScan, getGmailConnection, getUserSettings, listApplications, listOutreach, listReviewEvents } from "@/lib/db/repo";
+import { getActiveScan, getGmailConnection, getUserSettings, listApplications, listLatestUpdates, listOutreach, listReviewEvents } from "@/lib/db/repo";
 import { outreachEmailsByCompanyKey } from "@/lib/outreach";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   const userId = data?.claims.sub;
 
   // gmail_connections is only reachable with the admin client (no RLS policies).
-  const [connection, settings, scan, applications, reviewEvents, outreach] = userId
+  const [connection, settings, scan, applications, reviewEvents, outreach, latestUpdates] = userId
     ? await Promise.all([
         getGmailConnection(createAdminClient(), userId),
         getUserSettings(supabase, userId),
@@ -26,8 +26,9 @@ export default async function DashboardPage() {
         listApplications(supabase),
         listReviewEvents(supabase),
         listOutreach(supabase),
+        listLatestUpdates(supabase),
       ])
-    : [null, null, null, [], [], []];
+    : [null, null, null, [], [], [], {}];
 
   const activeScan: ActiveScan | null =
     scan && (scan.status === "listing" || scan.status === "processing")
@@ -67,6 +68,7 @@ export default async function DashboardPage() {
         ) : (
           <DashboardBody
             applications={applications}
+            latestUpdates={latestUpdates}
             reviewEvents={reviewEvents}
             googleEmail={connection?.google_email}
             outreachEmails={outreachEmailsByCompanyKey(outreach)}
