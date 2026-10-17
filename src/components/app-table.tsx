@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { EVENT_TYPE_LABELS, STATUS_DISPLAY_ORDER, type EventType, type Status } from "@/lib/config";
+import { STATUS_DISPLAY_ORDER, type Status } from "@/lib/config";
 import type { Application, LatestUpdate } from "@/lib/db/repo";
 import { cn } from "@/lib/utils";
 
@@ -174,13 +174,7 @@ export function AppTable({
 
 function LatestUpdateCell({ update }: { update?: LatestUpdate }) {
   if (!update) return <span className="text-muted-foreground">—</span>;
-  const label = EVENT_TYPE_LABELS[update.eventType as EventType] ?? "Update";
-  return (
-    <span className="flex flex-col">
-      <span>{format(new Date(update.at), "MMM d, yyyy")}</span>
-      <span className={cn("text-xs", update.eventType === "rejection" ? "text-destructive" : "text-muted-foreground")}>{label}</span>
-    </span>
-  );
+  return <span>{format(new Date(update.at), "MMM d, yyyy")}</span>;
 }
 
 /** The application's own recruiter, else the recruiters the user has emailed at this company. */
