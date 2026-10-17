@@ -55,3 +55,16 @@ describe("email open-tracker notifications", () => {
     expect(classify(m).isJobRelated).toBe(false);
   });
 });
+
+describe("email open-tracker hard rule", () => {
+  it("never classifies getmailtracker.com mail as job-related, even with strong application wording", () => {
+    const m = normalizeMessage({
+      id: "t1", threadId: "t1", labelIds: ["INBOX"], receivedAt: "2026-09-21T00:00:00Z",
+      from: "update@getmailtracker.com", fromName: "MailTracker",
+      subject: "Applied for New Grad Software Engineer Role at Greenboard",
+      snippet: "dave@greenboard.com has just read Applied for New Grad Software Engineer Role at Greenboard",
+      text: "Thank you for applying. We received your application. dave@greenboard.com has just read it.", headers: {},
+    } as never);
+    expect(classify(m).isJobRelated).toBe(false);
+  });
+});

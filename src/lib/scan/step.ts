@@ -103,6 +103,7 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
     let jobRelatedDelta = 0;
     let appsCreatedDelta = 0;
     const touchedApplicationIds = new Set<string>();
+    const emptiedCandidates = new Set<string>();
 
     for (const r of fetched) {
       if (scan.kind === "outreach" && r.parsed && !r.error) {
@@ -126,6 +127,8 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
         jobRelatedDelta++;
         const created = await processJobRelatedEvent(db, userId, r.parsed, r.extraction, touchedApplicationIds);
         if (created) appsCreatedDelta++;
+      } else {
+        await dropStaleEvent(db, r.messageId, touchedApplicationIds, emptiedCandidates);
       }
 
       await repo.markScanItem(db, scanId, r.messageId, "done");
@@ -133,6 +136,11 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
 
     let appsUpdatedDelta = 0;
     for (const applicationId of touchedApplicationIds) {
+      // An application whose only emails were just dropped as non-job (e.g. tracker notifications) goes away with them.
+      if (emptiedCandidates.has(applicationId) && (await repo.countEventsForApplication(db, applicationId)) === 0) {
+        await repo.deleteApplicationRow(db, applicationId);
+        continue;
+      }
       await rederiveApplication(db, applicationId);
       appsUpdatedDelta++;
     }
@@ -165,6 +173,20 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
     return { done, ...counters };
   } finally {
     await repo.releaseScanLease(db, scanId, lockToken);
+  }
+}
+
+/**
+ * A message that an updated parser no longer classifies as job-related must not linger from an older scan.
+ * User-locked events are left alone (D15).
+ */
+async function dropStaleEvent(db: Db, messageId: string, touched: Set<string>, emptied: Set<string>): Promise<void> {
+  const existing = await repo.getEvent(db, messageId);
+  if (!existing || existing.user_locked) return;
+  await repo.deleteEvent(db, messageId);
+  if (existing.application_id) {
+    touched.add(existing.application_id);
+    emptied.add(existing.application_id);
   }
 }
 
@@ -286,6 +308,34 @@ async function processJobRelatedEvent(
     return false;
   }
 
+  // Re-processing a role-less confirmation: the earliest one in its application stays put; any later one
+  // (merged there by older parser versions) is re-matched so it can split off into its own application.
+  if (
+    existing?.state === "linked" &&
+    existing.application_id &&
+    extraction.eventType === "application_confirmation" &&
+    !extraction.role
+  ) {
+    const siblings = await repo.listEventsForApplication(db, existing.application_id);
+    const hasEarlier = siblings.some(
+      (e) =>
+        e.message_id !== parsed.messageId &&
+        e.event_type === "application_confirmation" &&
+        (e.received_at < parsed.receivedAt || (e.received_at === parsed.receivedAt && e.message_id < parsed.messageId)),
+    );
+    if (!hasEarlier) {
+      await repo.upsertEvent(db, {
+        ...baseRow,
+        application_id: existing.application_id,
+        state: "linked",
+        user_locked: false,
+        match_confidence: existing.match_confidence,
+      });
+      touched.add(existing.application_id);
+      return false;
+    }
+  }
+
   const { matchInput, context, applications } = await loadMatchContext(db, {
     messageId: parsed.messageId,
     threadId: parsed.threadId,
@@ -334,6 +384,8 @@ async function processJobRelatedEvent(
   });
 
   if (applicationId) touched.add(applicationId);
+  // The event moved off its old application (e.g. a split): recompute that one too.
+  if (existing?.application_id && existing.application_id !== applicationId) touched.add(existing.application_id);
   return created;
 }
 

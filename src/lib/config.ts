@@ -1,7 +1,7 @@
 // All tunable lists and thresholds live here (see PROJECT_SPEC.md A6/A7).
 // Bump PARSER_VERSION whenever extraction behavior changes.
 
-export const PARSER_VERSION = 16;
+export const PARSER_VERSION = 18;
 
 /** Job-related if classification score >= this. */
 export const CLASSIFY_SCORE_THRESHOLD = 3;

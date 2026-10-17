@@ -193,6 +193,16 @@ export function classify(msg: NormalizedMessage, context: ClassifyContext = {}):
   const body = msg.text;
   const domain = registrableDomain(msg.from);
 
+  // Hard rule: open-tracker notifications (getmailtracker, mailtrack, ...) are never job events, whatever else they mention.
+  const hardTrackerSender =
+    (domain && (EMAIL_TRACKER_DOMAINS as readonly string[]).includes(domain)) ||
+    `${msg.from} ${msg.fromName ?? ""}`.toLowerCase().includes(EMAIL_TRACKER_SENDER_FRAGMENT);
+  const hardTrackerPhrase = EMAIL_TRACKER_PHRASES.find((p) => includesPhrase(subject, p));
+  if (hardTrackerSender || hardTrackerPhrase) {
+    reasons.push(`email open-tracker notification (${hardTrackerPhrase ? `subject phrase "${hardTrackerPhrase}"` : `sender "${msg.from}"`}) -> never job-related`);
+    return { isJobRelated: false, score: SCORE_WEIGHTS.emailTracker, eventType: undefined, reasons };
+  }
+
   if (domain && ATS_AND_ASSESSMENT_DOMAINS.includes(domain)) {
     score += SCORE_WEIGHTS.atsSender;
     reasons.push(`+${SCORE_WEIGHTS.atsSender} sender domain "${domain}" is an ATS/assessment platform`);

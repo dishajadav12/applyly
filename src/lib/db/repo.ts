@@ -181,6 +181,12 @@ export async function getEvent(db: Db, messageId: string): Promise<EmailEvent | 
   return data;
 }
 
+export async function countEventsForApplication(db: Db, applicationId: string): Promise<number> {
+  const { count, error } = await db.from("email_events").select("message_id", { count: "exact", head: true }).eq("application_id", applicationId);
+  if (error) fail("countEventsForApplication", error);
+  return count ?? 0;
+}
+
 export async function listEventsForApplication(db: Db, applicationId: string): Promise<EmailEvent[]> {
   const { data, error } = await db
     .from("email_events")
@@ -189,6 +195,12 @@ export async function listEventsForApplication(db: Db, applicationId: string): P
     .order("received_at", { ascending: true });
   if (error) fail("listEventsForApplication", error);
   return data;
+}
+
+/** Removes a stored event (e.g. one a newer parser no longer treats as job-related). */
+export async function deleteEvent(db: Db, messageId: string): Promise<void> {
+  const { error } = await db.from("email_events").delete().eq("message_id", messageId);
+  if (error) fail("deleteEvent", error);
 }
 
 /** For the matcher's M1 (same-thread) check. */

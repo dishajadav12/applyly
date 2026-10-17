@@ -139,15 +139,18 @@ export function matchEvent(event: MatchInputEvent, context: MatchContext): Match
       };
     }
 
-    // M3b: the event has a role, and the company has exactly one application with role Unknown.
-    const unknown = companyApps.filter((a) => a.role === "Unknown");
-    if (unknown.length === 1) {
+    // M3b: the event has a role, and the company has an open application with role Unknown (e.g. one of several
+    // role-less confirmations). Which one doesn't matter: derive fills the role in, and the next role goes to the next one.
+    const allUnknown = companyApps.filter((a) => a.role === "Unknown");
+    const openUnknown = allUnknown.filter((a) => !isTerminalStatus(a.status));
+    const unknown = openUnknown.length > 0 ? openUnknown : allUnknown.length === 1 ? allUnknown : [];
+    if (unknown.length >= 1) {
       return {
         action: "attach",
         applicationId: unknown[0].id,
-        matchConfidence: 0.8,
+        matchConfidence: unknown.length === 1 ? 0.8 : 0.6,
         rule: "M3b",
-        reason: `M3b: company's only application (${unknown[0].id}) has an unknown role; derive will fill it in`,
+        reason: `M3b: company has ${unknown.length} open application(s) with an unknown role; filling in ${unknown[0].id}`,
       };
     }
 
@@ -176,6 +179,16 @@ export function matchEvent(event: MatchInputEvent, context: MatchContext): Match
         reason: `M3c: email text names the role "${best[0].app.role}" of application ${best[0].app.id}`,
       };
     }
+  }
+
+  // M3d: a role-less "application received" email is its own application (e.g. several Google applications whose
+  // confirmations never name the role). Later emails naming a role fill the Unknown rows in via M3b.
+  if (event.eventType === "application_confirmation") {
+    return {
+      action: "create",
+      rule: "M3d",
+      reason: `M3d: role-less application confirmation at "${companyKey}" starts its own application (role stays Unknown until an email names it)`,
+    };
   }
 
   const nonTerminal = companyApps.filter((a) => !isTerminalStatus(a.status));

@@ -106,12 +106,28 @@ describe("matchEvent: M3 / M3b / M6 (event has a role)", () => {
     expect(result).toMatchObject({ action: "attach", applicationId: "app-1", matchConfidence: 0.8, rule: "M3b" });
   });
 
-  it("M6: creates when the role matches no existing application and there is more than one Unknown app", () => {
+  it("M3b: with several open Unknown apps, a role-bearing email fills in one of them", () => {
     const result = matchEvent(
       event({ role: "Data Analyst" }),
       ctx({ applications: [app({ id: "app-1", role: "Unknown" }), app({ id: "app-2", role: "Unknown" })] }),
     );
+    expect(result).toMatchObject({ action: "attach", applicationId: "app-1", rule: "M3b" });
+  });
+
+  it("M6: creates when every Unknown app is already closed and there is more than one", () => {
+    const result = matchEvent(
+      event({ role: "Data Analyst" }),
+      ctx({ applications: [app({ id: "app-1", role: "Unknown", status: "Rejected" }), app({ id: "app-2", role: "Unknown", status: "Rejected" })] }),
+    );
     expect(result).toMatchObject({ action: "create", rule: "M6" });
+  });
+
+  it("M3d: a role-less application confirmation starts its own application even if the company has others", () => {
+    const result = matchEvent(
+      event({ role: undefined, eventType: "application_confirmation" }),
+      ctx({ applications: [app({ id: "app-1", role: "Unknown", status: "Applied" })] }),
+    );
+    expect(result).toMatchObject({ action: "create", rule: "M3d" });
   });
 
   it("M6: creates when the role matches no existing named-role application", () => {
@@ -125,13 +141,13 @@ describe("matchEvent: M3 / M3b / M6 (event has a role)", () => {
 
 describe("matchEvent: M4 / M4b / M5 (event has no role)", () => {
   it("M4: attaches to the company's only non-terminal application, confidence 0.75", () => {
-    const result = matchEvent(event({ role: undefined }), ctx({ applications: [app({ id: "app-1", status: "Interviewing" })] }));
+    const result = matchEvent(event({ role: undefined, eventType: "recruiter_outreach" }), ctx({ applications: [app({ id: "app-1", status: "Interviewing" })] }));
     expect(result).toMatchObject({ action: "attach", applicationId: "app-1", matchConfidence: 0.75, rule: "M4" });
   });
 
   it("M4 doesn't care how many terminal applications also exist", () => {
     const result = matchEvent(
-      event({ role: undefined }),
+      event({ role: undefined, eventType: "recruiter_outreach" }),
       ctx({ applications: [app({ id: "app-open", status: "Applied" }), app({ id: "app-closed", status: "Rejected" })] }),
     );
     expect(result).toMatchObject({ action: "attach", applicationId: "app-open", rule: "M4" });
@@ -146,7 +162,7 @@ describe("matchEvent: M4 / M4b / M5 (event has no role)", () => {
 
   it("M5: a roleless follow-up email is ambiguous when there are several non-terminal applications", () => {
     const result = matchEvent(
-      event({ role: undefined }),
+      event({ role: undefined, eventType: "recruiter_outreach" }),
       ctx({ applications: [app({ id: "app-1", status: "Applied" }), app({ id: "app-2", status: "Interviewing" })] }),
     );
     expect(result).toMatchObject({ action: "review", matchConfidence: 0.4, rule: "M5" });
