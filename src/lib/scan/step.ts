@@ -125,7 +125,7 @@ export async function stepScan(db: Db, userId: string, scanId: string): Promise<
 
       if (r.extraction.isJobRelated) {
         jobRelatedDelta++;
-        const created = await processJobRelatedEvent(db, userId, r.parsed, r.extraction, touchedApplicationIds);
+        const created = await processJobRelatedEvent(db, userId, r.parsed, r.extraction, touchedApplicationIds, emptiedCandidates);
         if (created) appsCreatedDelta++;
       } else {
         await dropStaleEvent(db, r.messageId, touchedApplicationIds, emptiedCandidates);
@@ -270,6 +270,7 @@ async function processJobRelatedEvent(
   parsed: ParsedMessage,
   extraction: ExtractionResult,
   touched: Set<string>,
+  emptied: Set<string>,
 ): Promise<boolean> {
   const baseRow: Omit<TablesInsert<"email_events">, "application_id" | "state" | "user_locked" | "match_confidence"> = {
     user_id: userId,
@@ -385,7 +386,10 @@ async function processJobRelatedEvent(
 
   if (applicationId) touched.add(applicationId);
   // The event moved off its old application (e.g. a split): recompute that one too.
-  if (existing?.application_id && existing.application_id !== applicationId) touched.add(existing.application_id);
+  if (existing?.application_id && existing.application_id !== applicationId) {
+    touched.add(existing.application_id);
+    emptied.add(existing.application_id);
+  }
   return created;
 }
 

@@ -1,7 +1,7 @@
 // All tunable lists and thresholds live here (see PROJECT_SPEC.md A6/A7).
 // Bump PARSER_VERSION whenever extraction behavior changes.
 
-export const PARSER_VERSION = 18;
+export const PARSER_VERSION = 20;
 
 /** Job-related if classification score >= this. */
 export const CLASSIFY_SCORE_THRESHOLD = 3;
@@ -380,6 +380,11 @@ export const ROLE_IGNORED_TOKENS = [
   "early career",
   "university",
   "i",
+  // Location / format qualifiers that follow a title ("Software Engineer I - US", "... - Remote").
+  "us",
+  "usa",
+  "remote",
+  "hybrid",
 ] as const;
 
 export const STATUS_RANK = {

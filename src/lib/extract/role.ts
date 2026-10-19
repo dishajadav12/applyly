@@ -8,8 +8,12 @@ export type RoleExtraction = { role?: string; reasons: string[] };
 // A7: search the subject first, then the body, for these patterns.
 const ROLE_PATTERNS = [
   { name: '"following role: X"', re: /\bfollowing (?:role|position)\s*:\s*(.+?)(?:\s+\d{6,})?\s*(?:\.\s|\.$|\n|$)/i },
+  { name: '"role/position of X"', re: /\b(?:role|position|opening)\s+of\s+(?:an?\s+|the\s+)?(.+?)(?=\s+(?:at|on|with|in|has|was|for)\b|[.;!\n]|\s\(|$)/i },
   { name: '"for the X position/role"', re: /\bfor the\s+(.+?)\s+(?:position|role)\b/i },
   { name: '"application for X"', re: /\bapplication for\s+(.+?)(?=\s+(?:position|role|has|have|was|is|will|been)\b|[.,;\n]|$)/i },
+  // "Thank you for applying to DoorDash's X position!" / "your interest in the X role at DoorDash."
+  { name: '"applying to / interest in X role"', re: /\b(?:applying|applied|application|apply|interest)\s+(?:to|for|in|with)\s+(?:the\s+)?(?:[\w&.-]+(?:\s[\w&.-]+){0,3}?[’']s\s+)?((?:(?!\s(?:for|to)\s).)+?)\s+(?:position|role|opening|opportunity)\b/i },
+  { name: '"applied for X on/at"', re: /\bapplied for\s+(?:the\s+)?(.+?)(?=\s+(?:on|at|with|through|via|and|position|role)\b|[.;!\n]|$)/i },
   { name: '"applied to X at"', re: /\bapplied to\s+(.+?)\s+at\b/i },
   { name: '"X – Application Received"', re: /^(.+?)\s*[–-]\s*application received\b/im },
 ];
@@ -18,12 +22,14 @@ const ROLE_PATTERNS = [
 const FILLER_ONLY = /^(?:the|a|an|this|that|our|your|it|this position|the position|that role|this role|following)$/i;
 
 /** Leading boilerplate a subject puts before the role ("Confirmation | Interview for X"). */
-const ROLE_LEADING_NOISE = /^(?:(?:re|fwd?)\s*:\s*|(?:confirmation|confirmed|invitation|reminder|update|action required|next steps?)\s*[|:–-]\s*|(?:interview|application|assessment)\s+(?:for|to)\s+(?:the\s+)?)+/i;
+const ROLE_LEADING_NOISE = /^(?:(?:re|fwd?)\s*:\s*|(?:confirmation|confirmed|invitation|reminder|update|action required|next steps?|application (?:update|status|received|confirmation)|status update|your application)\s*[|:–-]\s*|(?:interview|application|assessment)\s+(?:for|to)\s+(?:the\s+)?)+/i;
 
 function cleanRole(raw: string): string {
   return raw
     .replace(ROLE_LEADING_NOISE, "")
     .replace(/\s*[([](?:job|req|requisition)\b[^)\]]*[)\]]\s*$/i, "")
+    // "Backend Engineer at Acme" -> "Backend Engineer" (only when what's left still looks like a title)
+    .replace(/^(.+?)\s+at\s+[A-Z][\w&.'’ -]*$/, (whole, title: string) => (containsRoleKeyword(title) ? title : whole))
     .replace(/\s+(?:and|or|at|for|with|to|the|a|of)$/i, "")
     .replace(/[\s,;:|–-]+$/, "")
     .trim();

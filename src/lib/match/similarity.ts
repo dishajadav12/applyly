@@ -6,8 +6,8 @@ import { normalizeRoleTokens } from "./normalize";
  * as maximally similar; a noise-only role compared with a real one has no similarity.
  */
 export function roleSimilarity(a: string, b: string): number {
-  const ta = normalizeRoleTokens(a);
-  const tb = normalizeRoleTokens(b);
+  const ta = normalizeRoleTokens(a, { stripParens: true });
+  const tb = normalizeRoleTokens(b, { stripParens: true });
   if (ta.size === 0 && tb.size === 0) return 1;
   if (ta.size === 0 || tb.size === 0) return 0;
 

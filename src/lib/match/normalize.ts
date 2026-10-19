@@ -13,8 +13,12 @@ const SINGLE_WORD_IGNORED = new Set<string>(ROLE_IGNORED_TOKENS.filter((p) => !p
  * Noise phrases are removed with word boundaries first so a single-letter entry like "i"
  * never strips a substring out of an unrelated word (e.g. "engineerIng" is untouched).
  */
-export function normalizeRoleTokens(role: string): Set<string> {
+export function normalizeRoleTokens(role: string, opts: { stripParens?: boolean } = {}): Set<string> {
   let s = role.toLowerCase();
+  // "(Graduation Date: Fall 2026-Summer 2027)", "(REQ-123)", "(Remote)": qualifiers, not part of the title.
+  if (opts.stripParens) s = s.replace(/\([^)]*\)/g, " ");
+  // "Entry-Level" and "Entry Level" are the same phrase.
+  s = s.replace(/[-–—]/g, " ");
   for (const phrase of MULTI_WORD_IGNORED) {
     s = s.replace(new RegExp(`\\b${escapeRegex(phrase)}\\b`, "g"), " ");
   }

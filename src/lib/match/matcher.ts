@@ -166,7 +166,7 @@ export function matchEvent(event: MatchInputEvent, context: MatchContext): Match
     const textTokens = normalizeRoleTokens(event.text);
     const named = companyApps
       .filter((a) => a.role !== "Unknown")
-      .map((app) => ({ app, tokens: normalizeRoleTokens(app.role) }))
+      .map((app) => ({ app, tokens: normalizeRoleTokens(app.role, { stripParens: true }) }))
       .filter(({ tokens }) => tokens.size > 0 && [...tokens].every((t) => textTokens.has(t)));
     const top = Math.max(0, ...named.map((n) => n.tokens.size));
     const best = named.filter((n) => n.tokens.size === top);

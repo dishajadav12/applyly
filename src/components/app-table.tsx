@@ -77,16 +77,21 @@ export function AppTable({
   const sorted = useMemo(() => {
     const rows = [...filtered];
     const dir = sortDir === "asc" ? 1 : -1;
+    const activityTime = (app: Application): number | null => {
+      const times = [app.applied_at, latestUpdates[app.id]?.at].filter((t): t is string => Boolean(t)).map((t) => Date.parse(t));
+      return times.length ? Math.max(...times) : null;
+    };
     rows.sort((a, b) => {
       if (sortKey === "company") return dir * a.company.localeCompare(b.company);
       if (sortKey === "status") return dir * (statusIndex(a.status) - statusIndex(b.status));
-      // "latest": rows with an update come first (newest on top); rows without fall back to applied date.
+      // "latest": one timeline by most recent activity: the newer of the latest update and the applied date.
       if (sortKey === "latest") {
-        const au = latestUpdates[a.id] ? Date.parse(latestUpdates[a.id].at) : null;
-        const bu = latestUpdates[b.id] ? Date.parse(latestUpdates[b.id].at) : null;
-        if (au !== null && bu !== null) return dir * (au - bu);
-        if (au !== null) return -1;
-        if (bu !== null) return 1;
+        const at = activityTime(a);
+        const bt = activityTime(b);
+        if (at === null && bt === null) return 0;
+        if (at === null) return 1;
+        if (bt === null) return -1;
+        return dir * (at - bt);
       }
       // "applied": nulls always sort last, regardless of direction.
       const at = a.applied_at ? Date.parse(a.applied_at) : null;

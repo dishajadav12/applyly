@@ -101,13 +101,13 @@ export async function listApplications(db: Db): Promise<Application[]> {
 
 export type LatestUpdate = { at: string; eventType: string };
 
-/** Per application: its newest linked email that is more than the initial confirmation (a stage event: rejection, interview, offer, ...). */
+/** Per application: its newest linked email that is more than the initial confirmation (rejection, interview, offer, recruiter or status follow-up, ...). */
 export async function listLatestUpdates(db: Db): Promise<Record<string, LatestUpdate>> {
   const { data, error } = await db
     .from("email_events")
     .select("application_id, event_type, received_at")
     .not("application_id", "is", null)
-    .in("event_type", ["assessment", "interview_invite", "final_interview", "offer", "rejection", "withdrawal"])
+    .neq("event_type", "application_confirmation")
     .order("received_at", { ascending: false })
     .limit(5000);
   if (error) fail("listLatestUpdates", error);

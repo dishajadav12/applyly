@@ -39,6 +39,9 @@ const ATS_AND_ASSESSMENT_DOMAINS = [...ATS_DOMAINS, ...ASSESSMENT_DOMAINS] as re
 
 // Phrase sets for event-type detection (A7 priority list); "rejection" and "interview_invite"
 // have an extra fallback handled inline below. "other_update" is the catch-all default.
+const INTEREST_ONLY_PHRASES = ["thank you for your interest in", "thanks for your interest in"];
+const IN_REVIEW_PHRASES = ["evaluating", "carefully reviewing", "under review", "reviewing your", "rolling basis", "appreciate your patience", "still reviewing"];
+
 const PHRASE_SETS: Partial<Record<EventType, readonly string[]>> = {
   offer: ["offer letter", "pleased to offer", "job offer", "offer of employment", "extend an offer"],
   withdrawal: [
@@ -171,6 +174,12 @@ function detectEventType(msg: NormalizedMessage, reasons: string[]): EventType {
     if (type === "recruiter_outreach" && isPlatformSender(msg)) continue;
 
     const phrase = findPhrase(sents, PHRASE_SETS[type] ?? []);
+    // "Thank you for your interest in the X role... we're evaluating candidates": a status follow-up to an
+    // application that already exists, not a new application confirmation.
+    if (phrase && type === "application_confirmation" && INTEREST_ONLY_PHRASES.includes(phrase) && IN_REVIEW_PHRASES.some((p) => haystack.includes(p))) {
+      reasons.push(`event type "other_update": "${phrase}" with in-review wording is a follow-up, not a new confirmation`);
+      return "other_update";
+    }
     if (phrase) {
       reasons.push(`event type "${type}" from phrase "${phrase}"`);
       return type;
