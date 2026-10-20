@@ -7,6 +7,7 @@ import { extractLeverCompany } from "./ats/lever";
 import { extractWorkAtAStartupCompany } from "./ats/workatastartup";
 import { extractWorkdayCompany } from "./ats/workday";
 import type { NormalizedMessage } from "./normalize";
+import { containsRoleKeyword } from "./role";
 import { NAME_RUN, looksLikePersonName, normalizeCompanyKey, sentenceCasePhrase, stripTrailingCompanySuffix, titleCase } from "./text-utils";
 
 export type CompanyExtraction = { company?: string; companyKey?: string; atsSource?: string; reasons: string[] };
@@ -61,10 +62,14 @@ export function extractCompany(msg: NormalizedMessage): CompanyExtraction {
   for (const haystack of [msg.subject, msg.text]) {
     for (const { name, re } of GENERIC_PATTERNS) {
       const m = haystack.match(re);
-      if (m?.[1]) {
-        reasons.push(`company from regex pattern ${name}`);
-        return finalize(m[1].trim(), atsSource, reasons);
+      if (!m?.[1]) continue;
+      // "interest in Software Development Engineer, ..." names the job, not the employer; fall through to the sender.
+      if (containsRoleKeyword(m[1])) {
+        reasons.push(`rejected company candidate "${m[1].trim()}" from ${name}: it reads like a job title`);
+        continue;
       }
+      reasons.push(`company from regex pattern ${name}`);
+      return finalize(m[1].trim(), atsSource, reasons);
     }
   }
 

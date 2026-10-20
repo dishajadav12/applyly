@@ -315,7 +315,9 @@ async function processJobRelatedEvent(
     existing?.state === "linked" &&
     existing.application_id &&
     extraction.eventType === "application_confirmation" &&
-    !extraction.role
+    !extraction.role &&
+    // An application created under an older parser may carry a wrong company; re-match instead of keeping it.
+    (!extraction.companyKey || (await repo.getApplication(db, existing.application_id))?.company_key === extraction.companyKey)
   ) {
     const siblings = await repo.listEventsForApplication(db, existing.application_id);
     const hasEarlier = siblings.some(
@@ -397,10 +399,18 @@ type MatchEventFields = Omit<MatchInputEvent, "userLocked">;
 
 /** Loads the thread events and same-company applications the matcher needs for one event. */
 async function loadMatchContext(db: Db, fields: MatchEventFields) {
-  const [threadEvents, companyApps] = await Promise.all([
+  const [threadEvents, loadedApps] = await Promise.all([
     repo.getEventsByThread(db, fields.threadId),
     fields.companyKey ? repo.getApplicationsByCompanyKey(db, fields.companyKey) : Promise.resolve([]),
   ]);
+  let companyApps = loadedApps;
+  // Re-processing: the event's own req id is already on its application's req_ids, which would make it match itself.
+  const self = await repo.getEvent(db, fields.messageId);
+  if (self?.application_id && companyApps.some((a) => a.id === self.application_id)) {
+    const others = (await repo.listEventsForApplication(db, self.application_id)).filter((e) => e.message_id !== fields.messageId);
+    const ownReqIds = new Set(others.map((e) => e.req_id).filter((r): r is string => Boolean(r)));
+    companyApps = companyApps.map((a) => (a.id === self.application_id ? { ...a, req_ids: a.req_ids.filter((r) => ownReqIds.has(r)) } : a));
+  }
   const matchInput: MatchInputEvent = { ...fields, userLocked: false };
   const existingEvents: MatchExistingEvent[] = threadEvents.map((e) => ({
     messageId: e.message_id,

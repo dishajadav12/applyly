@@ -1,7 +1,7 @@
 // All tunable lists and thresholds live here (see PROJECT_SPEC.md A6/A7).
 // Bump PARSER_VERSION whenever extraction behavior changes.
 
-export const PARSER_VERSION = 20;
+export const PARSER_VERSION = 23;
 
 /** Job-related if classification score >= this. */
 export const CLASSIFY_SCORE_THRESHOLD = 3;
@@ -362,6 +362,9 @@ export const REQ_ID_PATTERNS: readonly RegExp[] = [
   // The id must contain a digit, so "requirements" / "job description" are never read as ids.
   /\bReq(?:uisition)? ?(?:ID|#)?:? ?(?=[\w-]*\d)[\w-]+/i,
   /\bJob (?:ID|number|no\.?|#):? ?(?=[\w-]*\d)[\w-]+/i,
+  // Amazon "(ID: 10583340)"; Apple "following role: <title> 200689349" (title text, then a 9-digit id ending the sentence).
+  /(?<=\()ID: ?\d{5,}(?=\))/,
+  /(?<=following (?:role|position): [^\n]*?)\b\d{9}\b/,
   /gh_jid=\d+/,
   /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
 ];

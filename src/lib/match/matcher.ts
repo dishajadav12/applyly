@@ -56,6 +56,19 @@ function isTerminalStatus(status: Status): boolean {
   return (TERMINAL_STATUSES as readonly string[]).includes(status);
 }
 
+const NUMERIC_REQ_ID = /^\d{6,}$/;
+
+/**
+ * Two purely numeric requisition ids that differ are two postings (Apple lists several "Software Engineer, X"
+ * requisitions under one title), so a role match alone must not merge them. Non-numeric ids (UUIDs from links,
+ * "ID: n") are noisy and never count as a conflict.
+ */
+function reqIdsConflict(eventReqId: string | undefined, appReqIds: readonly string[]): boolean {
+  if (!eventReqId || !NUMERIC_REQ_ID.test(eventReqId)) return false;
+  const numeric = appReqIds.filter((id) => NUMERIC_REQ_ID.test(id));
+  return numeric.length > 0 && !numeric.includes(eventReqId);
+}
+
 /**
  * Matching (A8): rules M1–M8, evaluated in order; the first that fires decides.
  * Pure: no Supabase, no fetch, no Next imports. Sender domain is never used as a
@@ -126,6 +139,7 @@ export function matchEvent(event: MatchInputEvent, context: MatchContext): Match
     const named = companyApps.filter((a) => a.role !== "Unknown");
     let best: { app: MatchApplicationSummary; sim: number } | undefined;
     for (const app of named) {
+      if (reqIdsConflict(event.reqId, app.reqIds)) continue;
       const sim = roleSimilarity(event.role, app.role);
       if (!best || sim > best.sim) best = { app, sim };
     }

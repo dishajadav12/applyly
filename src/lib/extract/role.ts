@@ -13,6 +13,8 @@ const ROLE_PATTERNS = [
   { name: '"application for X"', re: /\bapplication for\s+(.+?)(?=\s+(?:position|role|has|have|was|is|will|been)\b|[.,;\n]|$)/i },
   // "Thank you for applying to DoorDash's X position!" / "your interest in the X role at DoorDash."
   { name: '"applying to / interest in X role"', re: /\b(?:applying|applied|application|apply|interest)\s+(?:to|for|in|with)\s+(?:the\s+)?(?:[\w&.-]+(?:\s[\w&.-]+){0,3}?[’']s\s+)?((?:(?!\s(?:for|to)\s).)+?)\s+(?:position|role|opening|opportunity)\b/i },
+  // Amazon: "Thank you for your interest in Software Development Engineer, Early Career - 2027 (US) (ID: 10583340)."
+  { name: '"interest in X (ID: n)"', re: /\binterest in\s+(?:the\s+)?(.+?)\s*\((?:job\s+|req\s+)?(?:id|number|#)\b[^)]*\)/i },
   { name: '"applied for X on/at"', re: /\bapplied for\s+(?:the\s+)?(.+?)(?=\s+(?:on|at|with|through|via|and|position|role)\b|[.;!\n]|$)/i },
   { name: '"applied to X at"', re: /\bapplied to\s+(.+?)\s+at\b/i },
   { name: '"X – Application Received"', re: /^(.+?)\s*[–-]\s*application received\b/im },
@@ -26,7 +28,10 @@ const ROLE_LEADING_NOISE = /^(?:(?:re|fwd?)\s*:\s*|(?:confirmation|confirmed|inv
 
 function cleanRole(raw: string): string {
   return raw
+    // html-to-text appends "[https://…]" after linked text; a (possibly truncated) link is never part of a title
+    .replace(/\s*\[https?:[^\]]*\]?/gi, "")
     .replace(ROLE_LEADING_NOISE, "")
+    .replace(/^(?:the|an?)\s+/i, "")
     .replace(/\s*[([](?:job|req|requisition)\b[^)\]]*[)\]]\s*$/i, "")
     // "Backend Engineer at Acme" -> "Backend Engineer" (only when what's left still looks like a title)
     .replace(/^(.+?)\s+at\s+[A-Z][\w&.'’ -]*$/, (whole, title: string) => (containsRoleKeyword(title) ? title : whole))
@@ -81,7 +86,7 @@ function candidatePhrases(text: string): string[] {
     .filter(Boolean);
 }
 
-function containsRoleKeyword(s: string): boolean {
+export function containsRoleKeyword(s: string): boolean {
   // Word start always; word end too for short keywords, so "swe" can't match inside "answer"
   // while "engineer" still matches "Engineering".
   return ROLE_KEYWORDS.some((k) => new RegExp(`(?<![a-z0-9])${escapeRegex(k)}${k.length <= 3 ? "(?![a-z0-9])" : ""}`, "i").test(s));

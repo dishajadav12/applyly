@@ -91,6 +91,14 @@ describe("matchEvent: M3 / M3b / M6 (event has a role)", () => {
     expect(result).toMatchObject({ action: "attach", applicationId: "app-1", matchConfidence: 0.9, rule: "M3" });
   });
 
+  it("M3: same title but a different numeric req id is a different posting (M6), a missing or same id still matches", () => {
+    const apps = [app({ id: "app-1", role: "Software Engineer, IS&T", reqIds: ["200689349"] })];
+    const e = (reqId?: string) => event({ role: "Software Engineer, IS&T", reqId });
+    expect(matchEvent(e("200700000"), ctx({ applications: apps }))).toMatchObject({ action: "create", rule: "M6" });
+    expect(matchEvent(e("200689349"), ctx({ applications: apps }))).toMatchObject({ action: "attach", rule: "M2" });
+    expect(matchEvent(e(undefined), ctx({ applications: apps }))).toMatchObject({ action: "attach", rule: "M3" });
+  });
+
   it("M3: picks the best-matching application when several exist", () => {
     const result = matchEvent(
       event({ role: "Backend Engineer" }),
